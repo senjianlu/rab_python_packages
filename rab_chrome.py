@@ -146,18 +146,23 @@ def build_chrome_and_execute_script(port_num,
                                     web_url,
                                     js,
                                     build_wait_time=3,
-                                    get_wait_time=3):
+                                    get_wait_time=10):
     try:
         if (not check_chrome(port_num)):
             build_chrome(port_num)
             time.sleep(build_wait_time)
         driver = get_driver(port_num)
+        # 设置页面加载超时时长
+        driver.set_page_load_timeout(get_wait_time)
+        driver.set_script_timeout(get_wait_time)
         # 只确保网址正确以应对接口的跨域禁止问题
         if (not driver.current_url.split("://")[1].split("/")[0]
                 == web_url.split("://")[1].split("/")[0]):
-            driver.get(web_url)
-            time.sleep(get_wait_time)
-            driver.implicity_wait(5)
+            try:
+                driver.get(web_url)
+            # 超时则停止网页加载
+            except:
+                driver.execute_script("window.stop()")
         if (js):
             js = urllib.parse.unquote(js)
         rab_chrome_logger.info("端口：" + str(port_num)
