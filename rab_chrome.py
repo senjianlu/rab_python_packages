@@ -6,7 +6,7 @@
 # @DATE: 2020/12/16 Wed
 # @TIME: 17:31:00
 #
-# @DESCRIPTION: 共通包 CHROME 浏览器构建
+# @DESCRIPTION: 共通包 Chrome 浏览器构建
 
 
 import os
@@ -136,7 +136,7 @@ def get_driver(port_num):
     return driver
 
 """
-@description: 在本地起 CHROME 并执行 JS 后关闭
+@description: 在本地起 Chrome 并执行 JS 后关闭
 -------
 @param: port_num<int>, web_url<str>, js<str>
 -------
