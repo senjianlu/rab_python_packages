@@ -6,7 +6,7 @@
 # @DATE: 2020/12/17 周四
 # @TIME: 11:03:40
 #
-# @DESCRIPTION: 共通包 PGSQL 数据库驱动
+# @DESCRIPTION: 共通包 PostgreSQL 数据库驱动
 
 
 import psycopg2
