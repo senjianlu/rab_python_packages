@@ -154,27 +154,31 @@ class r_pgsql_driver():
     """
     @description: 查询语句
     -------
-    @param: sql<str>
+    @param: sql<str>, args<list>
     -------
     @return: <list>
     """
-    def select(self, sql):
+    def select(self, sql, args=None):
         # 如果现在有连接就直接用
         if (not (self.cur and self.conn)):
             self.create()
         try:
-            self.cur.execute(sql)
+            self.cur.execute(sql, args)
             result_list = self.cur.fetchall()
-            rab_pgsql_driver_logger.info(" 查询成功！" \
-                                        + "\r SQL 语句：" + str(sql) \
-                                        + "\r 数据：" \
-                                        + str(result_list)[0:100] + "..." \
-                                        + " 长度：" + str(len(result_list)))
+            info_msg = " 查询成功！" \
+                       + "\r SQL 语句：" + str(sql) \
+                       + "\r 参数：" + str(args) \
+                       + "\r 数据：" \
+                       + str(result_list)[0:100] + "..." \
+                       + " 长度：" + str(len(result_list))
+            rab_pgsql_driver_logger.info(info_msg)
         except Exception as e:
             result_list = []
-            rab_pgsql_driver_logger.error(" 查询失败！" \
-                                        + str(e) \
-                                        + "\r SQL 语句：" + str(sql))
+            err_msg = " 查询失败！" \
+                       + str(e) \
+                       + "\r SQL 语句：" + str(sql) \
+                       + "\r 参数：" + str(args)
+            rab_pgsql_driver_logger.error(err_msg)
         finally:
             self.close()
         return result_list
