@@ -20,7 +20,7 @@ import configparser
 -------
 @return: 
 """
-def get_configs(file_name):
+def get_config(file_name):
     config = configparser.ConfigParser()
     # 判断路径是否存在，不在的话就在上层路径查找
     if (os.path.exists(file_name)):
