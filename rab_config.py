@@ -39,6 +39,6 @@ def get_config(file_name):
 """
 if __name__ == "__main__":
     # todo...
-    print("todo...")
+    print(type(list(get_config("config.ini").get("main", "game_ids"))))
 
         
