@@ -160,6 +160,7 @@ def build_chrome_and_execute_script(port_num,
                 == web_url.split("://")[1].split("/")[0]):
             try:
                 driver.get(web_url)
+                time.sleep(2)
             # 超时则停止网页加载
             except:
                 driver.execute_script("window.stop()")

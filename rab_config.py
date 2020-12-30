@@ -26,7 +26,7 @@ def get_config(file_name):
     if (os.path.exists(file_name)):
         config.read(file_name, encoding="utf-8")
     elif (os.path.exists("../"+file_name)):
-        config.read(file_name, encoding="utf-8")
+        config.read("../"+file_name, encoding="utf-8")
     return config
 
 
