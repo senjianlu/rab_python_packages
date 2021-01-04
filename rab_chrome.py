@@ -141,7 +141,9 @@ def get_driver(port_num, headless=False):
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument("window-size=1024,768")
         chrome_options.add_argument("--no-sandbox")
-        chrome_driver = "../chromedriver"
+        # 需要提前建立软连接
+        # ln -f /home/opc/selenium-online/chromedriver /usr/bin/chromedriver
+        chrome_driver = "chromedriver"
         driver = webdriver.Chrome(chrome_driver,
                                   desired_capabilities=capabilities,
                                   options=chrome_options)
