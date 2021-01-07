@@ -161,6 +161,7 @@ class r_proxy:
         self.xdaili_secret = None
         self.xdaili_ordernos_usage_counts = {}
         self.timeout = 20
+        self.http_auth = "rabproxy:12z991"
     
     """
     @description: 获取一个可用代理
@@ -180,8 +181,8 @@ class r_proxy:
                 = proxies_4_choose[min_proxy] + 1
             # 默认为 HTTP 代理形式
             min_proxy = {
-                "http": "http://" + str(min_proxy),
-                "https": "http://" + str(min_proxy)
+                "http": "http://" + self.http_auth + "@" + str(min_proxy),
+                "https": "http://" + self.http_auth + "@" + str(min_proxy)
             }
         elif (proxy_method and not web):
             proxy_method = proxy_method.lower()
@@ -194,8 +195,8 @@ class r_proxy:
             # HTTP 代理获取时，构造指定代理样式返回
             if (proxy_method.lower() == "http"):
                 min_proxy = {
-                    "http": "http://" + str(min_proxy),
-                    "https": "http://" + str(min_proxy)
+                    "http": "http://" + self.http_auth + "@" + str(min_proxy),
+                    "https": "http://" + self.http_auth + "@" + str(min_proxy)
                 }
         return min_proxy
 
@@ -241,8 +242,8 @@ class r_proxy:
             for ip in self.proxies["http_ips"]:
                 try:
                     http_proxies = {
-                        "http": "http://"+str(ip),
-                        "https": "http://"+str(ip)
+                        "http": "http://" + self.http_auth + "@" + str(ip),
+                        "https": "http://" + self.http_auth + "@" + str(ip)
                     }
                     url = "http://ip-api.com/json/?lang=zh-CN"
                     res = requests.get(url,
@@ -325,8 +326,8 @@ class r_proxy:
                     break
                 try:
                     http_proxies = {
-                        "http": "http://"+str(ip),
-                        "https": "http://"+str(ip)
+                        "http": "http://" + self.http_auth + "@" + str(ip),
+                        "https": "http://" + self.http_auth + "@" + str(ip)
                     }
                     url = web_url
                     res = requests.get(url,
