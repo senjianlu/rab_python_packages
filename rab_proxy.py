@@ -33,7 +33,7 @@ rab_proxy_logger = rab_logging.build_rab_logger()
 -------
 @return: proxies<dict>
 """
-def get_proxies(database, user, password, host, port, table_name):
+def get_proxies(database, user, password, host, port, table_name, area=None):
     # 连接数据库并执行 SQL 语句
     r_pgsql_driver = rab_pgsql_driver.r_pgsql_driver(database=database,
                                                      user=user,
@@ -44,7 +44,11 @@ def get_proxies(database, user, password, host, port, table_name):
     # 带表列名返回
     r_pgsql_driver.cur = r_pgsql_driver.conn.cursor(
         cursor_factory=psycopg2.extras.RealDictCursor)
-    sql = "SELECT * FROM " + str(table_name) + " WHERE 1 = 1"
+    if (area):
+        sql = "SELECT * FROM " + str(table_name) + " WHERE 1 = 1 AND " \
+              + "sps_ip_location = '" + area + "'"
+    else:
+        sql = "SELECT * FROM " + str(table_name) + " WHERE 1 = 1"
     select_result = r_pgsql_driver.select(sql)
     # 初始化不同代理池的列表
     proxies = {}
@@ -147,13 +151,14 @@ class r_proxy:
     -------
     @return:
     """
-    def __init__(self, database, user, password, host, port, table_name):
+    def __init__(self, database, user, password, host, port, table_name, area):
         self.proxies = get_proxies(database=database,
                                    user=user,
                                    password=password,
                                    host=host,
                                    port=port,
-                                   table_name=table_name)
+                                   table_name=table_name,
+                                   area=area)
         self.usage_counts = init_usage_counts(self.proxies)
         self.web_accesses = {}
         self.web_accesses_usage_counts = {}
