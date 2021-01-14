@@ -74,6 +74,40 @@ class r_pgsql_driver():
         self.cur = self.conn.cursor() #创建指针对象
 
     """
+    @description: 测试数据库连接是否可用
+    -------
+    @param:
+    -------
+    @return: bool
+    """
+    def test_connection(self):
+        test_sql = "SELECT 1;"
+        try:
+            self.cur.execute(sql)
+            result_list = self.cur.fetchall()
+            if (result_list):
+                return True
+        except Exception:
+            return False
+        return False
+
+    """
+    @description: 数据库重连
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def reconnect(self):
+        if (not (self.cur and self.conn)):
+            self.create()
+        else:
+            # 暂时注释以等待较好的重连解决方法
+            # self.conn = self.conn.reconnect()
+            # self.cur = self.conn.cursor()
+            self.create()
+
+    """
     @description: 关闭数据库连接
     -------
     @param:
@@ -96,9 +130,9 @@ class r_pgsql_driver():
     @return: <bool>
     """
     def delete_all(self, table_name):
-        # 如果现在有连接就直接用
-        if (not (self.cur and self.conn)):
-            self.create()
+        # 测试当前连接是否可用，不可用则重连
+        if (not self.test_connection()):
+            self.reconnect()
         sql = "DELETE FROM " + str(table_name)
         try:
             self.cur.execute(sql)
@@ -110,8 +144,6 @@ class r_pgsql_driver():
                                         + " 表清空失败！" \
                                         + str(e))
             result_bool = False
-        finally:
-            self.close()
         return result_bool
 
     """
@@ -122,9 +154,9 @@ class r_pgsql_driver():
     @return: <bool>
     """
     def execute_many(self, sql, data):
-        # 如果现在有连接就直接用
-        if (not (self.cur and self.conn)):
-            self.create()
+        # 测试当前连接是否可用，不可用则重连
+        if (not self.test_connection()):
+            self.reconnect()
         try:
             # executemany 因为效率问题放弃
             # cur.executemany(sql, data)
@@ -159,9 +191,9 @@ class r_pgsql_driver():
     @return: <list>
     """
     def select(self, sql, args=None):
-        # 如果现在有连接就直接用
-        if (not (self.cur and self.conn)):
-            self.create()
+        # 测试当前连接是否可用，不可用则重连
+        if (not self.test_connection()):
+            self.reconnect()
         try:
             self.cur.execute(sql, args)
             result_list = self.cur.fetchall()
