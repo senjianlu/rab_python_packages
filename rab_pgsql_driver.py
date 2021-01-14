@@ -83,7 +83,7 @@ class r_pgsql_driver():
     def test_connection(self):
         test_sql = "SELECT 1;"
         try:
-            self.cur.execute(sql)
+            self.cur.execute(test_sql)
             result_list = self.cur.fetchall()
             if (result_list):
                 return True
@@ -179,8 +179,6 @@ class r_pgsql_driver():
                                         + "\r 数据：" + str(data)
                                         + " 长度：" + str(len(data)))
             result_bool = False
-        finally:
-            self.close()
         return result_bool
 
     """
@@ -211,8 +209,6 @@ class r_pgsql_driver():
                        + "\r SQL 语句：" + str(sql) \
                        + "\r 参数：" + str(args)
             rab_pgsql_driver_logger.error(err_msg)
-        finally:
-            self.close()
         return result_list
 
 
