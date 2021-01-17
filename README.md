@@ -1,7 +1,9 @@
 # rab_python_packages
 我的爬虫自用包。  
 需要环境：Win64 位，Python3，PostgreSQL 数据库且版本大于10，Chrome 和 chromedirver 版本匹配  
-使用方法：git clone https://github.com/m18018230731/rab_python_packages.git（在项目主目录下）  
+使用方法（在项目主目录下）：  
+只使用当前版本：git clone https://github.com/m18018230731/rab_python_packages.git  
+依赖此仓库：git submodule add https://github.com/m18018230731/rab_python_packages.git  
 *注：既存方法的方法名和参数不进行修改，实在需要添加参数会赋予初始值，任何改动以不影响现在的代码作为第一前提。*  
 
 **rab_chrome**  
@@ -19,3 +21,6 @@
 
 **rab_telegram_bot**  
 >Telegram Bot 信息通知。
+
+**rab_config**  
+>读取 .ini 格式的配置文件。
