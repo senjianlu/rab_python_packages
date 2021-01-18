@@ -13,6 +13,7 @@ import os
 import re
 import time
 import urllib
+import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
@@ -36,7 +37,7 @@ rab_chrome_logger = rab_logging.build_rab_logger()
 """
 def build_chrome(port_num, headless=False):
     # Linux 下什么都不做
-    if (headless):
+    if ("Linux" in str(platform.platform()) or headless):
         return True
     # Windows 下在对应端口起浏览器
     else:
@@ -59,7 +60,7 @@ def build_chrome(port_num, headless=False):
 """
 def check_chrome(port_num, headless=False):
     # Linux 下什么都不做
-    if (headless):
+    if ("Linux" in str(platform.platform()) or headless):
         return True
     # Windows 下检验对应端口是否被占用
     else:
@@ -88,7 +89,7 @@ def check_chrome(port_num, headless=False):
 """
 def close_chrome(port_num, headless=False):
     # Linux 下什么都不做
-    if (headless):
+    if ("Linux" in str(platform.platform()) or headless):
         return True
     # Windows 下杀指定端口的进程
     else:
@@ -136,7 +137,7 @@ def get_driver(port_num, headless=False):
     capabilities['loggingPrefs'] = { 'browser':'ALL' }
     chrome_options = Options()
     # Linux 下，不启动 Chrome 界面
-    if (headless):
+    if ("Linux" in str(platform.platform()) or headless):
         chrome_options.add_argument('--headless')
         chrome_options.add_argument('--disable-gpu')
         chrome_options.add_argument("window-size=1024,768")
@@ -178,7 +179,7 @@ def build_chrome_and_execute_script(port_num,
                                     get_wait_time=3,
                                     headless=False):
     # Linux 下启动无界面 Chrome 并导入 Jquery 后执行 JS
-    if (headless):
+    if ("Linux" in str(platform.platform()) or headless):
         try:
             driver = get_driver(port_num, headless)
             # 前往地址
