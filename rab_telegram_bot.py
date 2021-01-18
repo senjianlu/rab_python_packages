@@ -53,7 +53,9 @@ class r_bot:
         try:
             # 如果有代理则使用代理访问
             if (self.proxy):
-                r = requests.get(get_updates_url, proxies=self.proxy)
+                r = requests.get(get_updates_url,
+                                 proxies=self.proxy,
+                                 verify=False)
             else:
                 r = requests.get(get_updates_url)
             result = json.loads(r.text)
@@ -100,7 +102,8 @@ class r_bot:
             if (self.proxy):
                 r = requests.post(send_message_url,
                                   params=params,
-                                  proxies=self.proxy)
+                                  proxies=self.proxy,
+                                  verify=False)
             else:
                 r = requests.post(send_message_url, params=params)
             return json.loads(r.text)
