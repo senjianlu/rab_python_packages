@@ -33,11 +33,12 @@ class r_bot:
     -------
     @return:
     """
-    def __init__(self, token):
+    def __init__(self, token, proxy=None):
         self.token = token
         self.url = "https://api.telegram.org/bot" + self.token
         # 字典 {chat_id<str>: last_message_id<int>}
         self.chat_id_last_message_id = {}
+        self.proxy = proxy
     
     """
     @description: 获取最新的聊天记录
@@ -50,7 +51,11 @@ class r_bot:
         # 获取最新的聊天记录的链接
         get_updates_url = self.url + "/getUpdates"
         try:
-            r = requests.get(get_updates_url)
+            # 如果有代理则使用代理访问
+            if (self.proxy):
+                r = requests.get(get_updates_url, proxies=self.proxy)
+            else:
+                r = requests.get(get_updates_url)
             result = json.loads(r.text)
             # 继上次获取后的新信息列表
             latest_messages = []
@@ -91,7 +96,13 @@ class r_bot:
             "text": message
         }
         try:
-            r = requests.post(send_message_url, params=params)
+            # 如果有代理则使用代理访问
+            if (self.proxy):
+                r = requests.post(send_message_url,
+                                  params=params,
+                                  proxies=self.proxy)
+            else:
+                r = requests.post(send_message_url, params=params)
             return json.loads(r.text)
         except Exception as e:
             return {"ok": False, "description": str(e)}
