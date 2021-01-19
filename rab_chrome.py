@@ -190,7 +190,7 @@ def build_chrome_and_execute_script(port_num,
             var importJs = document.createElement("script");
             importJs.setAttribute("type","text/javascript")
             importJs.setAttribute("src",
-                'http://libs.baidu.com/jquery/2.0.0/jquery.min.js')
+                'https://libs.baidu.com/jquery/2.0.0/jquery.min.js')
             document.getElementsByTagName("head")[0].appendChild(importJs)
             """
             driver.execute_script(import_jquery_js)
