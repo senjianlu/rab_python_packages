@@ -178,14 +178,14 @@ def build_chrome_and_execute_script(port_num,
                                     build_wait_time=3,
                                     get_wait_time=3,
                                     headless=False):
-    # Linux 下启动无界面 Chrome 并导入 Jquery 后执行 JS
+    # Linux 下启动无界面 Chrome 并导入 jQuery 后执行 JS
     if ("Linux" in str(platform.platform()) or headless):
         try:
             driver = get_driver(port_num, headless)
             # 前往地址
             driver.get(web_url)
             time.sleep(get_wait_time)
-            # 导入 Jquery
+            # 导入 jQuery
             import_jquery_js = """
             var importJs = document.createElement("script");
             importJs.setAttribute("type","text/javascript")
@@ -194,7 +194,7 @@ def build_chrome_and_execute_script(port_num,
             document.getElementsByTagName("head")[0].appendChild(importJs)
             """
             driver.execute_script(import_jquery_js)
-            # 循环等待直到 Jquery 加载完成，最大等待 10 秒
+            # 循环等待直到 jQuery 加载完成，最大等待 10 秒
             for i in range(0, 10):
                 test_js = "$('head').append('<p>jquery_test</p>');"
                 try:
