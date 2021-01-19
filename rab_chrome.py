@@ -190,12 +190,18 @@ def build_chrome_and_execute_script(port_num,
             var importJs = document.createElement("script");
             importJs.setAttribute("type","text/javascript")
             importJs.setAttribute("src",
-                'https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.1.0.min.js')
+                'http://libs.baidu.com/jquery/2.0.0/jquery.min.js')
             document.getElementsByTagName("head")[0].appendChild(importJs)
             """
             driver.execute_script(import_jquery_js)
-            # 等待 5 秒 Jquery 加载完成
-            time.sleep(5)
+            # 循环等待直到 Jquery 加载完成，最大等待 10 秒
+            for i in range(0, 10):
+                test_js = "$('head').append('<p>jquery_test</p>');"
+                try:
+                    driver.execute_script(test_js)
+                    break
+                except Exception:
+                    time.sleep(1)
             rab_chrome_logger.info("Liunx 下无头浏览器" \
                                     + " 网址：" + str(web_url) \
                                     + "\r执行 JS：" + str(js))
