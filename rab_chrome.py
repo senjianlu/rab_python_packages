@@ -184,7 +184,9 @@ def build_chrome_and_execute_script(port_num,
             driver = get_driver(port_num, headless)
             # 前往地址
             driver.get(web_url)
+            # 只静默等待指定时间，超时就停止加载页面
             time.sleep(get_wait_time)
+            driver.execute_script("window.stop();")
             # 导入 jQuery
             import_jquery_js = """
             var importJs = document.createElement("script");
