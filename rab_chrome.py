@@ -166,6 +166,32 @@ def get_driver(port_num, headless=False):
     return driver
 
 """
+@description: 导入 jQuery
+-------
+@param:
+-------
+@return:
+"""
+def import_jquery(driver):
+    # 导入 jQuery
+    import_jquery_js = """
+    var importJs = document.createElement("script");
+    importJs.setAttribute("type","text/javascript")
+    importJs.setAttribute("src",
+        'https://libs.baidu.com/jquery/2.0.0/jquery.min.js')
+    document.getElementsByTagName("head")[0].appendChild(importJs)
+    """
+    driver.execute_script(import_jquery_js)
+    # 循环等待直到 jQuery 加载完成，最大等待 10 秒
+    for i in range(0, 10):
+        test_js = "$('head').append('<p>jquery_test</p>');"
+        try:
+            driver.execute_script(test_js)
+            break
+        except Exception:
+            time.sleep(1)
+
+"""
 @description: 在本地起 Chrome 并执行 JS 后关闭
 -------
 @param: port_num<int>, web_url<str>, js<str>
@@ -188,22 +214,7 @@ def build_chrome_and_execute_script(port_num,
             time.sleep(get_wait_time)
             driver.execute_script("window.stop();")
             # 导入 jQuery
-            import_jquery_js = """
-            var importJs = document.createElement("script");
-            importJs.setAttribute("type","text/javascript")
-            importJs.setAttribute("src",
-                'https://libs.baidu.com/jquery/2.0.0/jquery.min.js')
-            document.getElementsByTagName("head")[0].appendChild(importJs)
-            """
-            driver.execute_script(import_jquery_js)
-            # 循环等待直到 jQuery 加载完成，最大等待 10 秒
-            for i in range(0, 10):
-                test_js = "$('head').append('<p>jquery_test</p>');"
-                try:
-                    driver.execute_script(test_js)
-                    break
-                except Exception:
-                    time.sleep(1)
+            import_jquery(driver)
             rab_chrome_logger.info("Liunx 下无头浏览器" \
                                     + " 网址：" + str(web_url) \
                                     + "\r执行 JS：" + str(js))
@@ -232,6 +243,9 @@ def build_chrome_and_execute_script(port_num,
                 # 超时则停止网页加载
                 except:
                     driver.execute_script("window.stop()")
+            # 导入 jQuery
+            import_jquery(driver)
+            # 执行 JS
             if (js):
                 js = urllib.parse.unquote(js)
             rab_chrome_logger.info("端口：" + str(port_num) \
