@@ -87,7 +87,7 @@ def check_chrome(port_num, headless=False):
 -------
 @return:
 """
-def close_chrome(port_num ,headless=False, driver=None):
+def close_chrome(port_num, headless=False, driver=None):
     # Linux 下什么都不做
     if ("Linux" in str(platform.platform()) or headless):
         if (driver):
