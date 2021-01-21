@@ -87,9 +87,12 @@ def check_chrome(port_num, headless=False):
 -------
 @return:
 """
-def close_chrome(port_num, headless=False):
+def close_chrome(port_num ,headless=False, driver=None):
     # Linux 下什么都不做
     if ("Linux" in str(platform.platform()) or headless):
+        if (driver):
+            # 关闭 Chrome 而非使用 .close() 关闭一个 Tab
+            driver.quit()
         return True
     # Windows 下杀指定端口的进程
     else:
@@ -223,7 +226,8 @@ def build_chrome_and_execute_script(port_num,
             err_msg = "Linux 下无头起 CHROMR 并执行 JS 时出错！" + str(e)
             rab_chrome_logger.error(err_msg)
         finally:
-            driver.close()
+            # 关闭 Chrome 而非使用 .close() 关闭一个 Tab
+            driver.quit()
     # Windows 下在指定端口建浏览器并执行 JS，然后关闭浏览器
     else:
         try:
