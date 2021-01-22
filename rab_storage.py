@@ -2,9 +2,9 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: \rab_python_packages\rab_proxy.py
-# @DATE: 2020/12/15 Tue
-# @TIME: 19:46:49
+# @FILE: /rab_python_packages/rab_storage.py
+# @DATE: 2021/01/22 Fri
+# @TIME: 14:38:05
 #
 # @DESCRIPTION: 共通包 多线程爬虫数据储存用模块
 
