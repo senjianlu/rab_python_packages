@@ -78,6 +78,28 @@ class r_storage:
                 time.self(self.wait_time)
         # 返回失败
         return False
+    
+    """
+    @description: 拷贝出数据并清空
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def copy_and_clean(self):
+        for i in range(0, self.max_tries):
+            if (not self.lock_flg):
+                self.lock()
+                # 数据插入并计数 + 1
+                infos_copy = self.infos
+                self.infos = []
+                self.unlock()
+                # 返回成功
+                return infos_copy
+            else:
+                time.self(self.wait_time)
+        # 返回失败
+        return False
 
 
 """
@@ -92,3 +114,5 @@ if __name__ == "__main__":
     for i in range(0, 10):
         r_storage.append(i)
         print(r_storage.infos)
+    print(r_storage.copy_and_clean())
+    print(r_storage.infos)
