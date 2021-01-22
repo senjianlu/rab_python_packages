@@ -89,10 +89,3 @@ if __name__ == "__main__":
     for i in range(0, 10):
         r_storage.append(i)
         print(r_storage.infos)
-
-
-
-        
-
-
-    
