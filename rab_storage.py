@@ -32,6 +32,7 @@ class r_storage:
         self.web = web
         self.length_limit = length_limit
         self.infos = infos
+        self.counter = 0
         self.lock_flg = False
         self.max_tries = 10
         self.wait_time = 0.1
@@ -67,7 +68,9 @@ class r_storage:
         for i in range(0, self.max_tries):
             if (not self.lock_flg):
                 self.lock()
+                # 数据插入并计数 + 1
                 self.infos.append(info)
+                self.counter = self.counter + 1
                 self.unlock()
                 # 返回成功
                 return True
