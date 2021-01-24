@@ -143,42 +143,38 @@ def get_chrome_proxy_extension(proxy):
     zips_path = "/root/GitHub/my-proxy-zips"
     # 存储模板的路径（GitHub 上直接拷贝下来即可）
     proxy_template_path = "/root/GitHub/selenium-chrome-private-proxy"
-    m = re.compile('([^:]+):([^\@]+)\@([\d\.]+):(\d+)').search(proxy)
-    if m:
-        # 提取代理的各项参数
-        username = m.groups()[0]
-        password = m.groups()[1]
-        ip = m.groups()[2]
-        port = m.groups()[3]
-        # print(username,password,ip,port)
-        # 创建一个定制Chrome代理扩展(zip文件)
-        if not os.path.exists(zips_path):
-            os.mkdir(zips_path)
-        extension_file_path = os.path.join(zips_path,
-            "{}.zip".format(username+"_"+password+"_"+ip+"_"+port))
-        if not os.path.exists(extension_file_path):
-            # 扩展文件不存在，创建
-            zf = zipfile.ZipFile(extension_file_path, mode="w")
-            if not os.path.exists(proxy_template_path):
-                # 从 GitHub 上拷贝到本地
-                clone_sh = "git clone https://github.com/senjianlu/" \
-                           + "selenium-chrome-private-proxy.git" \
-                           + " " + proxy_template_path
-                os.system(clone_sh)
-            zf.write(os.path.join(proxy_template_path, "manifest.json"),
-                     "manifest.json")
-            # 替换模板中的代理参数
-            bg_content = open(os.path.join(proxy_template_path,
-                                      "background.js")).read()
-            bg_content = bg_content.replace("%proxy_host", ip)
-            bg_content = bg_content.replace("%proxy_port", port)
-            bg_content = bg_content.replace("%username", username)
-            bg_content = bg_content.replace("%password", password)
-            zf.writestr('background.js', bg_content)
-            zf.close()
-        return extension_file_path
-    else:
-        raise Exception("用以制作 Chrome 插件的代理格式不合理！")
+    # 提取代理的各项参数
+    username = proxy.split("@")[0].split(":")[0]
+    password = proxy.split("@")[0].split(":")[1]
+    ip = proxy.split("@")[1].split(":")[0]
+    port =proxy.split("@")[1].split(":")[1]
+    # print(username,password,ip,port)
+    # 创建一个定制Chrome代理扩展(zip文件)
+    if not os.path.exists(zips_path):
+        os.mkdir(zips_path)
+    extension_file_path = os.path.join(zips_path,
+        "{}.zip".format(username+"_"+password+"_"+ip+"_"+port))
+    if not os.path.exists(extension_file_path):
+        # 扩展文件不存在，创建
+        zf = zipfile.ZipFile(extension_file_path, mode="w")
+        if not os.path.exists(proxy_template_path):
+            # 从 GitHub 上拷贝到本地
+            clone_sh = "git clone https://github.com/senjianlu/" \
+                        + "selenium-chrome-private-proxy.git" \
+                        + " " + proxy_template_path
+            os.system(clone_sh)
+        zf.write(os.path.join(proxy_template_path, "manifest.json"),
+                    "manifest.json")
+        # 替换模板中的代理参数
+        bg_content = open(os.path.join(proxy_template_path,
+                                    "background.js")).read()
+        bg_content = bg_content.replace("%proxy_host", ip)
+        bg_content = bg_content.replace("%proxy_port", port)
+        bg_content = bg_content.replace("%username", username)
+        bg_content = bg_content.replace("%password", password)
+        zf.writestr('background.js', bg_content)
+        zf.close()
+    return extension_file_path
 
 """
 @description: 接管指定端口的浏览器并返回 driver
