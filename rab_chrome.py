@@ -182,10 +182,10 @@ def import_jquery(driver):
     # 导入 jQuery
     import_jquery_js = """
     var importJs = document.createElement("script");
-    importJs.setAttribute("type","text/javascript")
+    importJs.setAttribute("type","text/javascript");
     importJs.setAttribute("src",
-        'https://libs.baidu.com/jquery/2.0.0/jquery.min.js')
-    document.getElementsByTagName("head")[0].appendChild(importJs)
+        'https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.1.min.js');
+    document.getElementsByTagName("head")[0].appendChild(importJs);
     """
     driver.execute_script(import_jquery_js)
     # 循环等待直到 jQuery 加载完成，最大等待 10 秒
@@ -196,6 +196,8 @@ def import_jquery(driver):
             break
         except Exception:
             time.sleep(1)
+
+    
 
 """
 @description: 在本地起 Chrome 并执行 JS 后关闭
