@@ -135,16 +135,19 @@ def build_chrome_and_wait(port_num, wait_second):
 -------
 @return:
 """
-def get_driver(port_num, headless=False):
+def get_driver(port_num, headless=False, proxy=None):
     capabilities = DesiredCapabilities.CHROME
     capabilities['loggingPrefs'] = { 'browser':'ALL' }
     chrome_options = Options()
     # Linux 下，不启动 Chrome 界面
     if ("Linux" in str(platform.platform()) or headless):
-        chrome_options.add_argument('--headless')
-        chrome_options.add_argument('--disable-gpu')
+        chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("window-size=1024,768")
         chrome_options.add_argument("--no-sandbox")
+        # 有代理就为浏览器添加代理信息
+        if (proxy):
+            chrome_options.add_argument("--proxy-server="+proxy["http"])
         # 需要提前建立软连接
         # ln -f /home/opc/selenium-online/chromedriver /usr/bin/chromedriver
         chrome_driver = "chromedriver"
@@ -206,16 +209,19 @@ def build_chrome_and_execute_script(port_num,
                                     js,
                                     build_wait_time=3,
                                     get_wait_time=3,
-                                    headless=False):
+                                    headless=False,
+                                    proxy=None):
     # Linux 下启动无界面 Chrome 并导入 jQuery 后执行 JS
     if ("Linux" in str(platform.platform()) or headless):
         try:
-            driver = get_driver(port_num, headless)
+            driver = get_driver(port_num, headless, proxy)
             # 前往地址
             driver.get(web_url)
             # 只静默等待指定时间，超时就停止加载页面
             time.sleep(get_wait_time)
             driver.execute_script("window.stop();")
+            # 配置较低或是网络不好的服务器 JS 执行时间很长
+            driver.set_script_timeout(180)
             # 导入 jQuery
             import_jquery(driver)
             rab_chrome_logger.info("Liunx 下无头浏览器" \
