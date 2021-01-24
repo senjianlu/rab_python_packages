@@ -224,7 +224,6 @@ def build_chrome_and_execute_script(port_num,
             # 配置较低或是网络不好的服务器 JS 执行时间很长
             driver.set_script_timeout(180)
             # === 测试代理 IP ===
-            driver = webdriver.Chrome(chrome_options = chromeOptions)
             driver.get("http://httpbin.org/ip")
             print(driver.page_source)
             # === 测试代理 IP ===
