@@ -223,6 +223,11 @@ def build_chrome_and_execute_script(port_num,
             driver.execute_script("window.stop();")
             # 配置较低或是网络不好的服务器 JS 执行时间很长
             driver.set_script_timeout(180)
+            # === 测试代理 IP ===
+            browser = webdriver.Chrome(chrome_options = chromeOptions)
+            browser.get("http://httpbin.org/ip")
+            print(browser.page_source)
+            # === 测试代理 IP ===
             # 导入 jQuery
             import_jquery(driver)
             rab_chrome_logger.info("Liunx 下无头浏览器" \
