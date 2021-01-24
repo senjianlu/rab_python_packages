@@ -147,6 +147,7 @@ def get_driver(port_num, headless=False, proxy=None):
         chrome_options.add_argument("--no-sandbox")
         # 有代理就为浏览器添加代理信息
         if (proxy):
+            print(proxy)
             chrome_options.add_argument("--proxy-server="+proxy["http"])
         # 需要提前建立软连接
         # ln -f /home/opc/selenium-online/chromedriver /usr/bin/chromedriver
@@ -196,8 +197,6 @@ def import_jquery(driver):
             break
         except Exception:
             time.sleep(1)
-
-    
 
 """
 @description: 在本地起 Chrome 并执行 JS 后关闭
