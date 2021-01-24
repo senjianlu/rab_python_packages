@@ -153,7 +153,7 @@ def get_chrome_proxy_extension(proxy):
         if not os.path.exists(zips_path):
             os.mkdir(zips_path)
         extension_file_path = os.path.join(zips_path,
-            "{}.zip".format(proxy.replace(":", "_")))
+            "{}.zip".format(username+"_"+password+"_"+ip+"_"+port))
         if not os.path.exists(extension_file_path):
             # 扩展文件不存在，创建
             zf = zipfile.ZipFile(extension_file_path, mode="w")
