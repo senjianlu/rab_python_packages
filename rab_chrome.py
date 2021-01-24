@@ -129,52 +129,53 @@ def build_chrome_and_wait(port_num, wait_second):
     time.sleep(int(wait_second))
     close_chrome(port_num)
 
-"""
-@description: Linux 下为浏览器安装代理插件以使用需要认证的 HTTP 代理
--------
-@param:
--------
-@return:
-"""
-def get_chrome_proxy_extension(proxy):
-    if ("://" in proxy):
-        proxy = proxy.split("://")[1]
-    # 插件存放路径
-    zips_path = "/root/GitHub/my-proxy-zips"
-    # 存储模板的路径（GitHub 上直接拷贝下来即可）
-    proxy_template_path = "/root/GitHub/selenium-chrome-private-proxy"
-    # 提取代理的各项参数
-    username = proxy.split("@")[0].split(":")[0]
-    password = proxy.split("@")[0].split(":")[1]
-    ip = proxy.split("@")[1].split(":")[0]
-    port =proxy.split("@")[1].split(":")[1]
-    # print(username,password,ip,port)
-    # 创建一个定制Chrome代理扩展(zip文件)
-    if not os.path.exists(zips_path):
-        os.mkdir(zips_path)
-    extension_file_path = os.path.join(zips_path,
-        "{}.zip".format(username+"_"+password+"_"+ip+"_"+port))
-    if not os.path.exists(extension_file_path):
-        # 扩展文件不存在，创建
-        zf = zipfile.ZipFile(extension_file_path, mode="w")
-        if not os.path.exists(proxy_template_path):
-            # 从 GitHub 上拷贝到本地
-            clone_sh = "git clone https://github.com/senjianlu/" \
-                        + "selenium-chrome-private-proxy.git" \
-                        + " " + proxy_template_path
-            os.system(clone_sh)
-        zf.write(os.path.join(proxy_template_path, "manifest.json"),
-                    "manifest.json")
-        # 替换模板中的代理参数
-        bg_content = open(os.path.join(proxy_template_path,
-                                    "background.js")).read()
-        bg_content = bg_content.replace("%proxy_host", ip)
-        bg_content = bg_content.replace("%proxy_port", port)
-        bg_content = bg_content.replace("%username", username)
-        bg_content = bg_content.replace("%password", password)
-        zf.writestr('background.js', bg_content)
-        zf.close()
-    return extension_file_path
+# """
+# @description: Linux 下为浏览器安装代理插件以使用需要认证的 HTTP 代理
+#               headless 下的 Chrome 并不支持插件安装因此废弃。
+# -------
+# @param:
+# -------
+# @return:
+# """
+# def get_chrome_proxy_extension(proxy):
+#     if ("://" in proxy):
+#         proxy = proxy.split("://")[1]
+#     # 插件存放路径
+#     zips_path = "/root/GitHub/my-proxy-zips"
+#     # 存储模板的路径（GitHub 上直接拷贝下来即可）
+#     proxy_template_path = "/root/GitHub/selenium-chrome-private-proxy"
+#     # 提取代理的各项参数
+#     username = proxy.split("@")[0].split(":")[0]
+#     password = proxy.split("@")[0].split(":")[1]
+#     ip = proxy.split("@")[1].split(":")[0]
+#     port =proxy.split("@")[1].split(":")[1]
+#     # print(username,password,ip,port)
+#     # 创建一个定制Chrome代理扩展(zip文件)
+#     if not os.path.exists(zips_path):
+#         os.mkdir(zips_path)
+#     extension_file_path = os.path.join(zips_path,
+#         "{}.zip".format(username+"_"+password+"_"+ip+"_"+port))
+#     if not os.path.exists(extension_file_path):
+#         # 扩展文件不存在，创建
+#         zf = zipfile.ZipFile(extension_file_path, mode="w")
+#         if not os.path.exists(proxy_template_path):
+#             # 从 GitHub 上拷贝到本地
+#             clone_sh = "git clone https://github.com/senjianlu/" \
+#                         + "selenium-chrome-private-proxy.git" \
+#                         + " " + proxy_template_path
+#             os.system(clone_sh)
+#         zf.write(os.path.join(proxy_template_path, "manifest.json"),
+#                     "manifest.json")
+#         # 替换模板中的代理参数
+#         bg_content = open(os.path.join(proxy_template_path,
+#                                     "background.js")).read()
+#         bg_content = bg_content.replace("%proxy_host", ip)
+#         bg_content = bg_content.replace("%proxy_port", port)
+#         bg_content = bg_content.replace("%username", username)
+#         bg_content = bg_content.replace("%password", password)
+#         zf.writestr('background.js', bg_content)
+#         zf.close()
+#     return extension_file_path
 
 """
 @description: 接管指定端口的浏览器并返回 driver
@@ -193,10 +194,10 @@ def get_driver(port_num, headless=False, proxy=None):
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("window-size=1024,768")
         chrome_options.add_argument("--no-sandbox")
-        # 有代理就为浏览器安装定制的代理插件
-        if (proxy):
-            chrome_proxy_extension = get_chrome_proxy_extension(proxy["http"])
-            chrome_options.add_extension(chrome_proxy_extension)
+        # 有代理就为浏览器安装定制的代理插件（headless 下不支持插件废弃）
+        # if (proxy):
+        #     chrome_proxy_extension = get_chrome_proxy_extension(proxy["http"])
+        #     chrome_options.add_extension(chrome_proxy_extension)
         # 需要提前建立软连接
         # ln -f /home/opc/selenium-online/chromedriver /usr/bin/chromedriver
         chrome_driver = "chromedriver"
@@ -331,9 +332,9 @@ def build_chrome_and_execute_script(port_num,
 @return:
 """
 if __name__ == "__main__":
-    print(get_chrome_proxy_extension("http://123:345@8.8.8.8:88"))
-    # build_chrome(9222)
-    # time.sleep(2)
-    # check_chrome(9222)
-    # time.sleep(2)
-    # close_chrome(9222)
+    # print(get_chrome_proxy_extension("http://123:345@8.8.8.8:88"))
+    build_chrome(9222)
+    time.sleep(2)
+    check_chrome(9222)
+    time.sleep(2)
+    close_chrome(9222)
