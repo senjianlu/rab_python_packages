@@ -234,12 +234,12 @@ def import_jquery(driver):
     var importJs = document.createElement("script");
     importJs.setAttribute("type","text/javascript");
     importJs.setAttribute("src",
-        'https://ajax.aspnetcdn.com/ajax/jQuery/jquery-3.4.1.min.js');
+        "https://libs.baidu.com/jquery/2.0.0/jquery.min.js");
     document.getElementsByTagName("head")[0].appendChild(importJs);
     """
     driver.execute_script(import_jquery_js)
-    # 循环等待直到 jQuery 加载完成，最大等待 10 秒
-    for i in range(0, 10):
+    # 循环等待直到 jQuery 加载完成，最大等待 20 秒
+    for i in range(0, 20):
         test_js = "$('head').append('<p>jquery_test</p>');"
         try:
             driver.execute_script(test_js)
