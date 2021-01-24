@@ -137,6 +137,8 @@ def build_chrome_and_wait(port_num, wait_second):
 @return:
 """
 def get_chrome_proxy_extension(proxy):
+    if ("://" in proxy):
+        proxy = proxy.split("://")[1]
     # 插件存放路径
     zips_path = "/root/GitHub/my-proxy-zips"
     # 存储模板的路径（GitHub 上直接拷贝下来即可）
