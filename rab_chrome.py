@@ -197,10 +197,10 @@ def get_driver(port_num, headless=False, proxy=None):
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("window-size=1024,768")
         chrome_options.add_argument("--no-sandbox")
-        # 有代理就为浏览器添加代理信息
+        # 有代理就为浏览器安装定制的代理插件
         if (proxy):
-            print(proxy)
-            chrome_options.add_argument("--proxy-server="+proxy["http"])
+            chrome_proxy_extension = get_chrome_proxy_extension(proxy["http"])
+            chrome_options.add_extension(chrome_proxy_extension)
         # 需要提前建立软连接
         # ln -f /home/opc/selenium-online/chromedriver /usr/bin/chromedriver
         chrome_driver = "chromedriver"
@@ -335,7 +335,7 @@ def build_chrome_and_execute_script(port_num,
 @return:
 """
 if __name__ == "__main__":
-    get_chrome_proxy_extension("http://123:345@8.8.8.8:88")
+    print(get_chrome_proxy_extension("http://123:345@8.8.8.8:88"))
     # build_chrome(9222)
     # time.sleep(2)
     # check_chrome(9222)
