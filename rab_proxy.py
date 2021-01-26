@@ -125,7 +125,7 @@ def init_xdaili_proxy(orderno, secret):
     auth = "sign=" + sign + "&" + "orderno=" + orderno + "&" \
            + "timestamp=" + timestamp
     # 拼接头和代理信息
-    proxy = {"http": "http://" + ip_port, "https": "https://" + ip_port}
+    proxy = {"http": "http://" + ip_port, "https": "http://" + ip_port}
     headers = {
         "Proxy-Authorization": auth,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " \
