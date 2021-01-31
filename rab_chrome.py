@@ -194,10 +194,14 @@ def get_driver(port_num, headless=False, proxy=None):
         chrome_options.add_argument("--disable-gpu")
         chrome_options.add_argument("window-size=1024,768")
         chrome_options.add_argument("--no-sandbox")
-        # 有代理就为浏览器安装定制的代理插件（headless 下不支持插件废弃）
-        # if (proxy):
-        #     chrome_proxy_extension = get_chrome_proxy_extension(proxy["http"])
-        #     chrome_options.add_extension(chrome_proxy_extension)
+        # 有需要认证的代理就为浏览器安装定制的代理插件（headless 下不支持插件废弃）
+        if (proxy and "@" in proxy.split("://")[1]):
+            # chrome_proxy_extension = get_chrome_proxy_extension(proxy["http"])
+            # chrome_options.add_extension(chrome_proxy_extension)
+            print("headless 下不支持插件废弃！")
+        # 无需认证的代理则直接加上属性即可
+        elif(proxy):
+            chrome_options.add_argument("--proxy-server="+proxy)
         # 需要提前建立软连接
         # ln -f /home/opc/selenium-online/chromedriver /usr/bin/chromedriver
         chrome_driver = "chromedriver"
