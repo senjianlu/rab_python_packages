@@ -109,17 +109,17 @@ def init_usage_counts(proxies):
 @return:
 """
 def init_xdaili_proxy(orderno, secret):
-    # 拼接获取ip的源地址
+    # 拼接获取 IP 的源地址
     ip = "forward.xdaili.cn"
     port = "80"
     ip_port = ip + ":" + port
-    # 获取md5加密源
+    # 获取 MD5 加密源
     timestamp = str(int(time.time()))
     string = "orderno=" + orderno + "," + "secret=" + secret + "," \
              + "timestamp=" + timestamp
-    # python3转码    
+    # Python3 转码    
     string = string.encode()
-    # md5加密
+    # MD5 加密
     md5_string = hashlib.md5(string).hexdigest()
     sign = md5_string.upper()
     auth = "sign=" + sign + "&" + "orderno=" + orderno + "&" \
