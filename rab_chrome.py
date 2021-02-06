@@ -323,6 +323,22 @@ def build_chrome_and_execute_script(port_num,
             close_chrome(port_num)
     return result
 
+"""
+@description: 确认显示通知弹窗
+-------
+@param:
+-------
+@return:
+"""
+def confirm_alert(driver):
+    try:
+        alert = driver.switch_to.alert
+        alert.accept()
+        return True
+    except Exception:
+        return False
+
+
 
 """
 @description: 单体测试
