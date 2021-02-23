@@ -186,7 +186,7 @@ def build_chrome_and_wait(port_num, wait_second):
 """
 def get_driver(port_num, headless=False, proxy=None):
     capabilities = DesiredCapabilities.CHROME
-    capabilities['loggingPrefs'] = { 'browser':'ALL' }
+    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
     chrome_options = Options()
     # Linux 下，不启动 Chrome 界面
     if ("Linux" in str(platform.platform()) or headless):
@@ -210,6 +210,9 @@ def get_driver(port_num, headless=False, proxy=None):
                                   options=chrome_options)
     # Windows 下接管对应端口的浏览器
     else:
+        if (not check_chrome(port_num)):
+            build_chrome(port_num)
+            time.sleep(2)
         chrome_options.add_experimental_option("debuggerAddress",
                                             "127.0.0.1:"+str(port_num))
         x86_chrome_path = "C:\Program Files (x86)\Google" \
