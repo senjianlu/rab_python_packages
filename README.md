@@ -1,5 +1,5 @@
 # rab_python_packages
-我的爬虫自用包。  
+简单可用的 Python 模块包，方便的用于爬虫和数据处理。  
 需要环境：Win64 位，Python3，PostgreSQL 数据库且版本大于10，Chrome 和 chromedirver 版本匹配  
 使用方法（在项目主目录下）：  
 只使用当前版本：git clone https://github.com/m18018230731/rab_python_packages.git  
