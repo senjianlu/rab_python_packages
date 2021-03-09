@@ -186,7 +186,7 @@ def build_chrome_and_wait(port_num, wait_second):
 """
 def get_driver(port_num, headless=False, proxy=None):
     capabilities = DesiredCapabilities.CHROME
-    capabilities['loggingPrefs'] = { 'browser':'ALL' }
+    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
     chrome_options = Options()
     # Linux 下，不启动 Chrome 界面
     if ("Linux" in str(platform.platform()) or headless):
