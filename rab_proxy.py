@@ -401,6 +401,16 @@ class r_proxy:
             = proxies_4_choose[min_orderno] + 1
         return init_xdaili_proxy(min_orderno, self.xdaili_secret)
 
+"""
+@description: 更新 SSR 订阅
+-------
+@param:
+-------
+@return:
+"""
+def do_ssr_update(auto_ssr_update_oneclick_sh_path):
+    os.system("sh " + auto_ssr_update_oneclick_sh_path)
+
 
 """
 @description: 单体测试
