@@ -129,27 +129,33 @@ class r_steam:
                     "//input[@id='imageLogin']")))
             # 检查是否已经登录
             try:
+                time.sleep(1)
                 # 如果有当前账户名说明已经登录完成了
                 account_div = self.driver.find_element_by_class_name(
                     "OpenID_loggedInAccount")
                 logined_flg = True
             except Exception as e:
                 logined_flg = False
-            # 没有登录的情况输入用户名和密码
-            if (not logined_flg):
-                # STEAM 用户名输入框
-                steam_account_name_input = self.driver \
-                                        .find_element_by_id("steamAccountName")
-                # STEAM 密码输入框
-                steam_password_input = self.driver \
-                                        .find_element_by_id("steamPassword")
-                # 输入用户名和密码
-                steam_account_name_input.send_keys(self.username)
-                steam_password_input.send_keys(self.password)
+            # 登录的情况下进行登出操作
+            if (logined_flg):
+                print("Steam 当前已经处于登录状态，尝试登出...")
+                # 选择登出这个账号
+                logout_div_a = self.driver.find_element_by_xpath(
+                    "//div[@class='OpenID_Logout']/a")
+                logout_div_a.click()
+            # STEAM 用户名输入框
+            steam_account_name_input = self.driver \
+                                    .find_element_by_id("steamAccountName")
+            # STEAM 密码输入框
+            steam_password_input = self.driver \
+                                    .find_element_by_id("steamPassword")
+            # 输入用户名和密码
+            steam_account_name_input.send_keys(self.username)
+            steam_password_input.send_keys(self.password)
             # 点击登录按钮
             self.driver.find_element_by_id("imageLogin").click()
             # 无令牌的情况下或者当前已经是登录状态就算登录成功
-            if (not self.token_flg or logined_flg):
+            if (not self.token_flg):
                 return True
             else:
                 # 等待需要令牌的弹窗出现
