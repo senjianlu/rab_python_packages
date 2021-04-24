@@ -9,6 +9,7 @@
 # @DESCRIPTION: 共通包 代理获取模块
 
 
+import os
 import json
 import time
 import hashlib
