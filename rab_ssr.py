@@ -10,6 +10,8 @@
 #               整体是对 https://github.com/senjianlu/auto-SSR-update 的封装
 
 
+import os
+import json
 import base64
 import requests
 from urllib.parse import urlparse
@@ -206,9 +208,9 @@ class r_ssr:
                  ssr_config_path="/usr/local/share/shadowsocksr",
                  ssr_port=1080,
                  access_test_urls=[],
-                 access_test_timeout=10,
+                 access_test_timeout=5,
                  proxy_location=["香港", "台湾"],
-                 linkage_used_ips_limit=2):
+                 linkage_used_ips_limit=5):
         # SSR 订阅地址
         self.subscription_urls = subscription_urls
         # 本机 SSR config 配置文件所在路径
@@ -260,7 +262,7 @@ class r_ssr:
                                            indent=4,
                                            separators=(',', ':'))
             # 开始写入更新后的代理信息
-            with open(self.ssr_config_path+"/config.json", "w", \ 
+            with open(self.ssr_config_path+"/config.json", "w",
                     encoding="UTF-8") as f:
                 f.write(origin_config)
             print("已更新代理信息！代理信息：")
@@ -338,8 +340,7 @@ class r_ssr:
     @return:
     """
     def update(self):
-        ssr_infos = ssr_parser.parse_ssr_subscription_urls(
-                        self.ssr_subscription_urls)
+        ssr_infos = parse_ssr_subscription_urls(self.subscription_urls)
         # 为了防止出现没有更多的满足条件的 IP 的情况，使用 change_flg 加以判断
         change_flg = False
         # 循环每个代理信息
@@ -366,7 +367,7 @@ class r_ssr:
     -------
     @return:
     """
-    def do_update(self)
+    def do_update(self):
         change_flg = self.update()
         # 判断是否进行了更改
         if (change_flg):
@@ -380,3 +381,22 @@ class r_ssr:
                 return False
         return True
 
+
+"""
+@description: 单体测试
+-------
+@param:
+-------
+@return:
+"""
+if __name__ == "__main__":
+    # SSR 订阅链接
+    ssr_subscription_urls = []
+    # 需要 SSR 节点一定能访问的网站，例如推特等 
+    access_test_urls = []
+    # infos = parse_ssr_subscription_urls(ssr_subscription_urls)
+    # for info in infos:
+    #     print(info)
+    r_ssr = r_ssr(ssr_subscription_urls, access_test_urls=access_test_urls)
+    for i in range(0, 10):
+        r_ssr.do_update()
