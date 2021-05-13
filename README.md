@@ -2,8 +2,8 @@
 简单可用的 Python 模块包，方便的用于爬虫和数据处理。  
 需要环境：Win64 位，Python3，PostgreSQL 数据库且版本大于10，Chrome 和 chromedirver 版本匹配  
 使用方法（在项目主目录下）：  
-只使用当前版本：git clone https://github.com/m18018230731/rab_python_packages.git  
-依赖此仓库：git submodule add https://github.com/m18018230731/rab_python_packages.git  
+只使用当前版本：git clone https://github.com/senjianlu/rab_python_packages.git  
+依赖此仓库：git submodule add https://github.com/senjianlu/rab_python_packages.git  
 *注：既存方法的方法名和参数不进行修改，实在需要添加参数会赋予初始值，任何改动以不影响现在的代码作为第一前提。*  
 
 **rab_chrome**  
@@ -30,3 +30,8 @@
 
 **rab_steam**
 >Steam 登录模块和手机令牌获取功能的封装。
+
+**rab_ssr**
+>Linux 下解析 SSR 订阅信息并更新本机的 SS 设置以实现代理。
+  
+感谢 [JetBrains](https://www.jetbrains.com/) 为本项目提供的开源许可证，我也更推荐您使用 [PyCharm](https://www.jetbrains.com/pycharm/) 导入本包进行 Python 项目的开发。
