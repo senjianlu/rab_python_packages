@@ -24,17 +24,43 @@ from urllib.parse import urlparse
 -------
 @return:
 """
-def get_subscription_origin_infos(subscription_urls):
+def get_subscription_origin_infos(subscription_urls,
+                                  ssr_proxy,
+                                  proxy_4_subscription_urls):
     subscription_origin_infos = []
     for subscription_url in subscription_urls:
+        # 不使用代理、使用上次的 SSR 节点、使用备用节点来访问订阅地址
         try:
-            # 默认对订阅链接的访问不使用代理
+            # 不使用代理访问订阅链接
             response = requests.get(subscription_url, timeout=30)
             subscription_origin_infos.append(response.text)
-        except Exception as e:
-            print(subscription_url + " 获取订阅原始信息出错！" \
-                  + "\r\n出错信息：" + str(e))
             break
+        except Exception as e:
+            print(subscription_url + " 不使用代理获取订阅原始信息出错！" \
+                + "\r\n出错信息：" + str(e))
+        try:
+            # 使用上次的 SSR 节点访问订阅链接
+            ssr_proxy = {
+                "http": "socks5://127.0.0.1:" + str(ssr_port),
+                "https": "socks5://127.0.0.1:" + str(ssr_port)
+            }
+            response = requests.get(
+                subscription_url, proxies=ssr_proxy, timeout=30)
+            subscription_origin_infos.append(response.text)
+            break
+        except Exception as e:
+            print(subscription_url + " 使用上次 SSR 节点获取订阅原始信息出错！" \
+                + "\r\n出错信息：" + str(e))
+        try:
+            # 使用备用节点访问订阅链接
+            response = requests.get(
+                subscription_url, proxies=proxy_4_subscription_urls, timeout=30)
+            subscription_origin_infos.append(response.text)
+            break
+        except Exception as e:
+            print(subscription_url + " 使用备用节点获取订阅原始信息出错！" \
+                + "\r\n出错信息：" + str(e))
+        print(subscription_url + " 三次尝试访问均失败，已舍弃。")
     return subscription_origin_infos
 
 """
@@ -174,10 +200,13 @@ def parse_ssr_origin_info(ssr_origin_info):
 -------
 @return:
 """
-def parse_ssr_subscription_urls(subscription_urls):
+def parse_ssr_subscription_urls(subscription_urls,
+                                ssr_port,
+                                proxy_4_subscription_urls):
     # 获取 SSR 订阅的原始信息并解码
     # subscription_urls = get_subscription_urls()
-    subscription_origin_infos = get_subscription_origin_infos(subscription_urls)
+    subscription_origin_infos = get_subscription_origin_infos(subscription_urls,
+        ssr_port, proxy_4_subscription_urls)
     # 从订阅原始信息中拆分出每条 SSR 的原始信息
     ssr_origin_infos = get_ssr_origin_infos(subscription_origin_infos)
     # 逐条解析 SSR，以获得具体信息
@@ -210,7 +239,8 @@ class r_ssr:
                  access_test_urls=[],
                  access_test_timeout=5,
                  proxy_location=["香港", "台湾"],
-                 linkage_used_ips_limit=5):
+                 linkage_used_ips_limit=5,
+                 proxy_4_subscription_urls=None):
         # SSR 订阅地址
         self.subscription_urls = subscription_urls
         # 本机 SSR config 配置文件所在路径
@@ -229,6 +259,8 @@ class r_ssr:
         self.linkage_used_ips = []
         # 代理 IP 列表最大长度，如果为 2 的话则是在两个 IP 中循环
         self.linkage_used_ips_limit = linkage_used_ips_limit
+        # 备用的用以访问订阅地址的代理
+        self.proxy_4_subscription_urls = proxy_4_subscription_urls
     
     """
     @description: 修改 SSR 的配置文件
@@ -340,7 +372,9 @@ class r_ssr:
     @return:
     """
     def update(self):
-        ssr_infos = parse_ssr_subscription_urls(self.subscription_urls)
+        ssr_infos = parse_ssr_subscription_urls(self.subscription_urls,
+                                                self.ssr_port,
+                                                self.proxy_4_subscription_urls)
         # 为了防止出现没有更多的满足条件的 IP 的情况，使用 change_flg 加以判断
         change_flg = False
         # 循环每个代理信息
@@ -380,6 +414,64 @@ class r_ssr:
             if (not self.update()):
                 return False
         return True
+    
+    """
+    @description: 测试所有节点对指定网站的访问情况并统计
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def test_all(self):
+        ssr_infos = parse_ssr_subscription_urls(self.subscription_urls,
+                                                self.ssr_port,
+                                                self.proxy_4_subscription_urls)
+        # 结果集
+        # {
+        #     "web_url_01": {
+        #         "ok": 10,
+        #         "ng": 20,
+        #         "total": 30
+        #     },
+        #     "web_url_02": {
+        #         "ok": 5,
+        #         "ng": 10,
+        #         "total": 15
+        #     }
+        # }
+        result_dict = {}
+        for access_test_url in self.access_test_urls:
+            result_dict[access_test_url] = {
+                "ok": 0,
+                "ng": 0,
+                "total": 0
+            }
+        proxy = {
+            "http": "socks5://127.0.0.1:" + str(self.ssr_port),
+            "https": "socks5://127.0.0.1:" + str(self.ssr_port)
+        }
+        for ssr_info in ssr_infos:
+            # 修改 ssr_config 并测试是否可以网页
+            self.update_ssr_config(ssr_info)
+            # 重启 SSR
+            os.system("ssr stop")
+            os.system("ssr start")
+            # 测试此代理是否可以访问所有测试页面
+            for access_test_url in self.access_test_urls:
+                result_dict[access_test_url]["total"] += 1
+                try:
+                    response = requests.get(access_test_url,
+                                            proxies=proxy,
+                                            timeout=self.access_test_timeout)
+                    if (response.status_code == 200):
+                        result_dict[access_test_url]["ok"] += 1
+                    else:
+                        print("测试代理访问网站失败！" + str(response.status_code))
+                        result_dict[access_test_url]["ng"] += 1
+                except Exception as e:
+                    print("测试代理访问网站出错！错误信息：" + str(e))
+                    result_dict[access_test_url]["ng"] += 1
+        return result_dict
 
 
 """
