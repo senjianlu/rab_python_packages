@@ -239,7 +239,7 @@ class r_ssr:
                  access_test_urls=[],
                  access_test_timeout=5,
                  proxy_location=["香港", "台湾"],
-                 linkage_used_ips_limit=5,
+                 linkage_used_ips_limit=100,
                  proxy_4_subscription_urls=None):
         # SSR 订阅地址
         self.subscription_urls = subscription_urls
@@ -344,9 +344,9 @@ class r_ssr:
             "https": "socks5://127.0.0.1:" + str(self.ssr_port)
         }
         try:
-            res = url = requests.get("http://ip-api.com/json/?lang=zh-CN",
-                                     proxies=proxy,
-                                     timeout=self.access_test_timeout)
+            res = requests.get("http://ip-api.com/json/?lang=zh-CN",
+                               proxies=proxy,
+                               timeout=self.access_test_timeout)
             # 地域
             location = json.loads(res.text)["country"]
             # IP
@@ -459,17 +459,20 @@ class r_ssr:
             # 测试此代理是否可以访问所有测试页面
             for access_test_url in self.access_test_urls:
                 result_dict[access_test_url]["total"] += 1
-                try:
-                    response = requests.get(access_test_url,
-                                            proxies=proxy,
-                                            timeout=self.access_test_timeout)
-                    if (response.status_code == 200):
-                        result_dict[access_test_url]["ok"] += 1
-                    else:
-                        print("测试代理访问网站失败！" + str(response.status_code))
+                if (self.test_proxy_limit()):
+                    try:
+                        response = requests.get(access_test_url,
+                                                proxies=proxy,
+                                                timeout=self.access_test_timeout)
+                        if (response.status_code == 200):
+                            result_dict[access_test_url]["ok"] += 1
+                        else:
+                            print("测试访问失败！" + str(response.status_code))
+                            result_dict[access_test_url]["ng"] += 1
+                    except Exception as e:
+                        print("测试访问出错！错误信息：" + str(e))
                         result_dict[access_test_url]["ng"] += 1
-                except Exception as e:
-                    print("测试代理访问网站出错！错误信息：" + str(e))
+                else:
                     result_dict[access_test_url]["ng"] += 1
         return result_dict
 
@@ -483,12 +486,17 @@ class r_ssr:
 """
 if __name__ == "__main__":
     # SSR 订阅链接
-    ssr_subscription_urls = []
+    ssr_subscription_urls = [
+    ]
     # 需要 SSR 节点一定能访问的网站，例如推特等 
     access_test_urls = []
     # infos = parse_ssr_subscription_urls(ssr_subscription_urls)
     # for info in infos:
     #     print(info)
-    r_ssr = r_ssr(ssr_subscription_urls, access_test_urls=access_test_urls)
-    for i in range(0, 10):
-        r_ssr.do_update()
+    # proxy_4_subscription_urls = {
+    # }
+    r_ssr = r_ssr(ssr_subscription_urls, access_test_urls=access_test_urls,
+        proxy_4_subscription_urls=proxy_4_subscription_urls)
+    # for i in range(0, 10):
+    #     r_ssr.do_update()
+    print(r_ssr.test_all())
