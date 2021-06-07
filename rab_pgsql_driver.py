@@ -147,6 +147,29 @@ class r_pgsql_driver():
         return result_bool
 
     """
+    @description: 执行单一 SQL 语句
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def execute(self, sql)
+        # 测试当前连接是否可用，不可用则重连
+        if (not self.test_connection()):
+            self.reconnect()
+        try:
+            self.cur.execute(sql)
+            self.conn.commit()
+            rab_pgsql_driver_logger.info(str(sql) + " SQL 执行成功！")
+            result_bool = True
+        except Exception as e:
+            rab_pgsql_driver_logger.error(str(sql) \
+                                        + " SQL 执行失败！" \
+                                        + str(e))
+            result_bool = False
+        return result_bool
+
+    """
     @description: 根据提供的 SQL 语句处理多条数据
     -------
     @param: sql<str>, data<list>
