@@ -153,7 +153,7 @@ class r_pgsql_driver():
     -------
     @return:
     """
-    def execute(self, sql)
+    def execute(self, sql):
         # 测试当前连接是否可用，不可用则重连
         if (not self.test_connection()):
             self.reconnect()
