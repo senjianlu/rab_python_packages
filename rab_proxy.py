@@ -60,22 +60,47 @@ def get_proxies(database, user, password, host, port, table_name, area=None):
     # 遍历
     for row in select_result:
         # IP 池
-        ips.append(row["sps_ip"])
+        ips.append(row["sps_domain"])
         # 反向代理
-        if (str(row["sps_reverse_proxy_flg"]) == "1"):
-            reverse_ips.append(row["sps_ip"]
-                                     + ":"
-                                     + row["sps_reverse_proxy_port"])
+        if (row["sps_reverse_proxy_port"]):
+            # 80 端口直接访问域名即可
+            if (int(row["sps_reverse_proxy_port"]) == 80):
+                reverse_ips.append(row["sps_domain"])
+            else:
+                reverse_ips.append("http://" \
+                                   + row["sps_domain"] \
+                                   + ":" \
+                                   + row["sps_reverse_proxy_port"])
         # HTTP 代理
-        if (str(row["sps_http_proxy_flg"]) == "1"):
-            http_ips.append(row["sps_ip"]
-                                     + ":"
-                                     + row["sps_http_proxy_port"])
+        if (row["sps_http_proxy_port"]):
+            # 如果有认证信息则直接拼接至代理信息
+            if (row["sps_http_auth_info"]):
+                http_ips.append("http://" \
+                                + row["sps_http_auth_info"] \
+                                + "@" \
+                                + row["sps_domain"] \
+                                + ":"
+                                + row["sps_http_proxy_port"])
+            else:
+                http_ips.append("http://" \
+                                + row["sps_domain"] \
+                                + ":"
+                                + row["sps_http_proxy_port"])
         # SOCKS5 代理
-        if (str(row["sps_socks5_proxy_flg"]) == "1"):
-            socks5_ips.append(row["sps_ip"]
-                                     + ":"
-                                     + row["sps_socks5_proxy_port"])
+        if (row["sps_socks5_proxy_port"]):
+            # 如果有认证信息则直接拼接至代理信息
+            if (row["sps_socks5_auth_info"]):
+                socks5_ips.append("socks5://" \
+                                  + row["sps_socks5_auth_info"] \
+                                  + "@" \
+                                  + row["sps_domain"] \
+                                  + ":"
+                                  + row["sps_socks5_proxy_port"])
+            else:
+                socks5_ips.append("socks5://" \
+                                  + row["sps_domain"] \
+                                  + ":"
+                                  + row["sps_socks5_proxy_port"])
     proxies["ips"] = ips
     proxies["reverse_ips"] = reverse_ips
     proxies["http_ips"] = http_ips
@@ -152,7 +177,14 @@ class r_proxy:
     -------
     @return:
     """
-    def __init__(self, database, user, password, host, port, table_name, area):
+    def __init__(self,
+                 database,
+                 user,
+                 password,
+                 host,
+                 port,
+                 table_name,
+                 area=None):
         self.proxies = get_proxies(database=database,
                                    user=user,
                                    password=password,
@@ -167,7 +199,6 @@ class r_proxy:
         self.xdaili_secret = None
         self.xdaili_ordernos_usage_counts = {}
         self.timeout = 20
-        self.http_auth = "rabproxy:12z991"
     
     """
     @description: 获取一个可用代理
@@ -187,22 +218,31 @@ class r_proxy:
                 = proxies_4_choose[min_proxy] + 1
             # 默认为 HTTP 代理形式
             min_proxy = {
-                "http": "http://" + self.http_auth + "@" + str(min_proxy),
-                "https": "http://" + self.http_auth + "@" + str(min_proxy)
+                "http": min_proxy,
+                "https": min_proxy
             }
         elif (proxy_method and not web):
             proxy_method = proxy_method.lower()
             # 取使用次数最少的代理返回
             proxies_4_choose = self.usage_counts[proxy_method
-                                                + "_usage_counts"]
+                                                 + "_usage_counts"]
             min_proxy = min(proxies_4_choose, key=proxies_4_choose.get)
             self.usage_counts[proxy_method + "_usage_counts"][min_proxy] \
                 = proxies_4_choose[min_proxy] + 1
+            # 反代时无需任何处理直接返回 IP 或域名
+            if (proxy_method.lower() == "reverse"):
+                pass
             # HTTP 代理获取时，构造指定代理样式返回
-            if (proxy_method.lower() == "http"):
+            elif(proxy_method.lower() == "http"):
                 min_proxy = {
-                    "http": "http://" + self.http_auth + "@" + str(min_proxy),
-                    "https": "http://" + self.http_auth + "@" + str(min_proxy)
+                    "http": min_proxy,
+                    "https": min_proxy
+                }
+            # SOCKS5 代理获取时，构造指定代理样式返回
+            elif(proxy_method.lower() == "socks5"):
+                min_proxy = {
+                    "socks5": min_proxy,
+                    "socks5": min_proxy
                 }
         return min_proxy
 
@@ -219,7 +259,7 @@ class r_proxy:
         if (proxy_method == "all" or proxy_method == "reverse"):
             for ip in self.proxies["reverse_ips"]:
                 try:
-                    url = "http://" + str(ip) + "/market/priceoverview/"
+                    url = str(ip) + "/market/priceoverview/"
                     params = {
                         "appid": "730",
                         "currency": "1",
@@ -248,8 +288,8 @@ class r_proxy:
             for ip in self.proxies["http_ips"]:
                 try:
                     http_proxies = {
-                        "http": "http://" + self.http_auth + "@" + str(ip),
-                        "https": "http://" + self.http_auth + "@" + str(ip)
+                        "http": ip,
+                        "https": ip
                     }
                     url = "http://ip-api.com/json/?lang=zh-CN"
                     res = requests.get(url,
@@ -275,6 +315,38 @@ class r_proxy:
                     error_msg = str(ip) + " HTTP 代理出错！" + str(e)
                     rab_proxy_logger.error(error_msg)
                     self.usage_counts["http_usage_counts"][ip] = 9999
+        # SOCKS5 代理
+        if (proxy_method == "all" or proxy_method == "socks5"):
+            for ip in self.proxies["socks5_ips"]:
+                try:
+                    http_proxies = {
+                        "http": ip,
+                        "https": ip
+                    }
+                    url = "http://ip-api.com/json/?lang=zh-CN"
+                    res = requests.get(url,
+                                       proxies=http_proxies,
+                                       timeout=self.timeout)
+                    # 正常返回
+                    if (res.status_code != 200):
+                        info_msg = str(ip) \
+                                    + " SOCKS5 代理失效！相应代码：" \
+                                    + str(res.status_code) + " " \
+                                    + str(res.text)
+                        self.usage_counts["socks5_usage_counts"][ip] = 9999
+                    else:
+                        res_json = json.loads(res.text)
+                        if (str(ip).split(":")[0] == res_json.get("query")):
+                            info_msg = str(ip) + " SOCKS5 代理可用！"
+                            self.usage_counts["socks5_usage_counts"][ip] += 1
+                        else:
+                            info_msg = str(ip) + " SOCKS5 代理失效！ip不相符！"
+                            self.usage_counts["socks5_usage_counts"][ip] = 9999
+                    rab_proxy_logger.info(info_msg)
+                except Exception as e:
+                    error_msg = str(ip) + " SOCKS5 代理出错！" + str(e)
+                    rab_proxy_logger.error(error_msg)
+                    self.usage_counts["socks5_usage_counts"][ip] = 9999
 
     """
     @description: 测试网站访问
@@ -294,7 +366,7 @@ class r_proxy:
                 if (len(steam_access_ips) >= num):
                     break
                 try:
-                    url = "http://" + str(ip) + "/market/priceoverview/"
+                    url = str(ip) + "/market/priceoverview/"
                     params = {
                         "appid": "730",
                         "currency": "1",
@@ -332,8 +404,8 @@ class r_proxy:
                     break
                 try:
                     http_proxies = {
-                        "http": "http://" + self.http_auth + "@" + str(ip),
-                        "https": "http://" + self.http_auth + "@" + str(ip)
+                        "http": ip,
+                        "https": ip
                     }
                     url = web_url
                     res = requests.get(url,

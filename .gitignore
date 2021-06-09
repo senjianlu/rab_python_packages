@@ -1,5 +1,3 @@
-*.log
-/__pycache__
-/log
-/rab_python_packages
+**/log
+**/rab_log
 **/__pycache__
