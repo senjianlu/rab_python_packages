@@ -259,7 +259,7 @@ class r_proxy:
         if (proxy_method == "all" or proxy_method == "reverse"):
             for ip in self.proxies["reverse_ips"]:
                 try:
-                    url = str(ip) + "/market/priceoverview/"
+                    url = "http://" + str(ip) + "/market/priceoverview/"
                     params = {
                         "appid": "730",
                         "currency": "1",
