@@ -101,13 +101,13 @@ class r_a_post_office():
     -------
     @return: <bool>
     """
-    def create_mailbox(self, mailbox_prefix):
+    def create_mailbox(self, mailbox_prefix, mailbox_password):
         # 参数
         params = {
             "action": "create",
             "domain": self._domain,
             "user": mailbox_prefix,
-            "passwd": "Jyt"+mailbox_prefix
+            "passwd": mailbox_password
         }
         # 请求
         response = self.execute_command("CMD_API_POP", params)
