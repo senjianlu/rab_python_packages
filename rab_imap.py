@@ -34,7 +34,7 @@ def get_mail_content(mail_message):
     mail_content = ""
     for row in mail_message.walk():
         if (not row.is_multipart()):            
-            mail_content += row.get_payload(decode=True).decode("utf-8")
+            mail_content += row.get_payload(decode=True).decode("UTF-8")
     return mail_content
 
 
@@ -88,13 +88,19 @@ class r_imap():
     def get_all_mails(self):
         all_mails = []
         status, count = r_imap.client.select("Inbox")
+        # 默认搜索所有邮件
         status, mail_no_list_data = r_imap.client.search(None, "ALL")
         mail_no_list = mail_no_list_data[0].split()
+        # 对每封邮件进行解析和序列化
         for mail_no in mail_no_list:
             status, mail_data = r_imap.client.fetch(mail_no, "(RFC822)")
             mail_message = email.message_from_string(
-                mail_data[0][1].decode("utf-8"))
-            all_mails.append(mail_message)
+                mail_data[0][1].decode("UTF-8"))
+            # 将邮件类转换为 JSON 格式数据
+            mail = {}
+            mail["title"] = get_mail_title(mail_message)
+            mail["content"] = get_mail_content(mail_message)
+            all_mails.append(mail)
         return all_mails
 
     """
@@ -108,9 +114,10 @@ class r_imap():
         keyword_4_search = keyword_4_search.lower()
         mails = []
         all_mails = self.get_all_mails()
-        for mail_message in all_mails:
-            if (keyword_4_search in get_mail_title(mail_message).lower()):
-                mails.append(mail_message)
+        # 循环每封邮件判断标题是否包含指定关键词
+        for mail in all_mails:
+            if (keyword_4_search in mail["title"].lower()):
+                mails.append(mail)
         return mails
 
 
@@ -122,7 +129,4 @@ class r_imap():
 @return:
 """
 if __name__ == "__main__":
-    r_imap = r_imap("imap.gmail.com", 993, "username@gmail.com", "password")
-    mails = r_imap.serach_title("Welcome")
-    for mail in mails:
-        print(get_mail_content(mail))
+    pass

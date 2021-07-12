@@ -22,12 +22,31 @@ import configparser
 """
 def get_config(file_name):
     config = configparser.ConfigParser()
-    # 判断路径是否存在，不在的话就在上层路径查找
+    # 判断该路径下配置文件是否存在
     if (os.path.exists(file_name)):
         config.read(file_name, encoding="utf-8")
-    elif (os.path.exists("../"+file_name)):
+    # 不在的话就在上层路径查找
+    elif(os.path.exists("../"+file_name)):
         config.read("../"+file_name, encoding="utf-8")
+    # 或者在共通包中查找
+    elif(os.path.exists("../rab_python_packages/"+file_name)):
+        config.read("../rab_python_packages/"+file_name, encoding="utf-8")
     return config
+
+"""
+@description: 读取共通包中的配置文件
+-------
+@param:
+-------
+@return:
+"""
+def load_package_config(configuration_class, configuration_items):
+    package_config = get_config("rab_config.ini")
+    configuration_vaules = []
+    for configuration_item in configuration_items:
+        configuration_vaules.append(
+            package_config.get(configuration_class, configuration_item))
+    return configuration_vaules
 
 
 """
@@ -38,7 +57,6 @@ def get_config(file_name):
 @return:
 """
 if __name__ == "__main__":
-    # todo...
-    print(type(list(get_config("config.ini").get("main", "game_ids"))))
+    pass
 
         

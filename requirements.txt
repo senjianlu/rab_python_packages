@@ -1,0 +1,5 @@
+urllib3==1.25.11
+selenium==3.141.0
+configparser==5.0.2
+psycopg2==2.8.6
+requests[socks]>=2.10.0

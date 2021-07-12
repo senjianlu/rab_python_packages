@@ -13,7 +13,6 @@ import os
 import re
 import time
 import urllib
-import zipfile
 import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options

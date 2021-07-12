@@ -34,7 +34,7 @@ def get_subscription_origin_infos(subscription_urls,
             # 不使用代理访问订阅链接
             response = requests.get(subscription_url, timeout=30)
             subscription_origin_infos.append(response.text)
-            break
+            continue
         except Exception as e:
             print(subscription_url + " 不使用代理获取订阅原始信息出错！" \
                 + "\r\n出错信息：" + str(e))
@@ -47,7 +47,7 @@ def get_subscription_origin_infos(subscription_urls,
             response = requests.get(
                 subscription_url, proxies=ssr_proxy, timeout=30)
             subscription_origin_infos.append(response.text)
-            break
+            continue
         except Exception as e:
             print(subscription_url + " 使用上次 SSR 节点获取订阅原始信息出错！" \
                 + "\r\n出错信息：" + str(e))
@@ -56,7 +56,7 @@ def get_subscription_origin_infos(subscription_urls,
             response = requests.get(
                 subscription_url, proxies=proxy_4_subscription_urls, timeout=30)
             subscription_origin_infos.append(response.text)
-            break
+            continue
         except Exception as e:
             print(subscription_url + " 使用备用节点获取订阅原始信息出错！" \
                 + "\r\n出错信息：" + str(e))
