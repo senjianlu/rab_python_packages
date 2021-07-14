@@ -1,11 +1,37 @@
 # rab_python_packages
-简单可用的 Python 模块包，方便的用于爬虫和数据处理。  
-需要环境：Win64 位，Python3，PostgreSQL 数据库且版本大于10，Chrome 和 chromedirver 版本匹配  
-使用方法（在项目主目录下）：  
-只使用当前版本：git clone https://github.com/senjianlu/rab_python_packages.git  
-依赖此仓库：git submodule add https://github.com/senjianlu/rab_python_packages.git  
+
+## 项目介绍  
+简单可用的 Python3 模块包。  
+方便的在此基础上进行爬虫开发、爬虫代理切换和爬虫数据存储，极端情况下也可使用 Selenium 接管 Chrome 爬取网页。  
+
+## 环境
+| 系统 | 版本 |  
+| -----| ---- |  
+| Linux | CentOS7 |
+
+| 数据库 | 版本 |  
+| -----| ---- |  
+| PostgreSQL | 12 |
+
+| 模块 | 版本 |
+| -----| ---- |  
+|**Python**|**3.8.2**|  
+|fastapi|0.62.0|  
+|requests|2.24.0|  
+|uvicorn|0.13.1|
+
+## 使用方法 
+仅使用当前版本（维持爬虫的稳定可用）:
+```bash
+git clone https://github.com/senjianlu/rab_python_packages.git
+```
+依赖此仓库（获取更多的封装方法）:
+```bash
+git submodule add https://github.com/senjianlu/rab_python_packages.git
+```
 *注：既存方法的方法名和参数不进行修改，实在需要添加参数会赋予初始值，任何改动以不影响现在的代码作为第一前提。*  
 
+## 模块描述
 **rab_chrome**  
 >本地端口起 Chrome 并使用 Selenium 进行控制。
 
@@ -33,5 +59,6 @@
 
 **rab_ssr**
 >Linux 下解析 SSR 订阅信息并更新本机的 SS 设置以实现代理。
-  
-感谢 [JetBrains](https://www.jetbrains.com/) 为本项目提供的开源许可证，我也更推荐您使用 [PyCharm](https://www.jetbrains.com/pycharm/) 导入本包进行 Python 项目的开发。
+
+## 特别鸣谢
+- 感谢 [JetBrains](https://www.jetbrains.com/) 为本项目提供的开源许可证
