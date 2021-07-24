@@ -330,6 +330,7 @@ def get_proxy_info(proxies):
 def create_container(docker_client, image, proxy_port):
     container = docker_client.containers.run(
                     image=image,
+                    name="proxy_port_"+str(proxy_port),
                     command="/bin/bash",
                     # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
                     ports={"1081/tcp": proxy_port},
