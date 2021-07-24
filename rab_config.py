@@ -25,10 +25,10 @@ def get_config(file_name):
     # 判断该路径下配置文件是否存在
     if (os.path.exists(file_name)):
         config.read(file_name, encoding="utf-8")
-    # 不在的话就在上层路径查找
-    elif(os.path.exists("../"+file_name)):
-        config.read("../"+file_name, encoding="utf-8")
-    # 或者在共通包中查找
+    # 不在的话就在共通包中查找
+    elif(os.path.exists("rab_python_packages/"+file_name)):
+        config.read("rab_python_packages/"+file_name, encoding="utf-8")
+    # 或者在上级路径的共通包中查找
     elif(os.path.exists("../rab_python_packages/"+file_name)):
         config.read("../rab_python_packages/"+file_name, encoding="utf-8")
     return config
