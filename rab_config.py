@@ -21,13 +21,51 @@ import configparser
 @return: 
 """
 def get_config(file_name):
-    config = configparser.ConfigParser()
-    # 判断路径是否存在，不在的话就在上层路径查找
+    config = configparser.RawConfigParser()
+    # 判断该路径下配置文件是否存在
     if (os.path.exists(file_name)):
         config.read(file_name, encoding="utf-8")
-    elif (os.path.exists("../"+file_name)):
+    # 不在的话就在上层路径查找
+    elif(os.path.exists("../"+file_name)):
         config.read("../"+file_name, encoding="utf-8")
+    # 或者在共通包中查找
+    elif(os.path.exists("../rab_python_packages/"+file_name)):
+        config.read("../rab_python_packages/"+file_name, encoding="utf-8")
     return config
+
+"""
+@description: 合理化转换
+-------
+@param:
+-------
+@return:
+"""
+def parse_if_need(configuration_item):
+    parsed_configuration_item = configuration_item
+    # 如果是 list 形式的
+    if ("[" in configuration_item and "]" in configuration_item):
+        configuration_item = configuration_item.lstrip("[").rstrip("]")
+        list_items = configuration_item.split(",")
+        parsed_configuration_item = []
+        for list_item in list_items:
+            list_item = list_item.lstrip().lstrip('"').rstrip('"')
+            parsed_configuration_item.append(list_item)
+    return parsed_configuration_item
+
+"""
+@description: 读取共通包中的配置文件
+-------
+@param:
+-------
+@return:
+"""
+def load_package_config(file_name, configuration_class, configuration_item):
+    package_config = get_config(file_name)
+    configuration_value = package_config.get(
+        configuration_class, configuration_item)
+    # 对部分值进行合理转换，例如：列表
+    configuration_value = parse_if_need(configuration_value)
+    return configuration_value
 
 
 """
@@ -38,7 +76,7 @@ def get_config(file_name):
 @return:
 """
 if __name__ == "__main__":
-    # todo...
-    print(type(list(get_config("config.ini").get("main", "game_ids"))))
-
-        
+    subscription_urls = load_package_config(
+        "rab_config.ini", "rab_subscription", "subscription_urls")
+    print(subscription_urls)
+    pass
