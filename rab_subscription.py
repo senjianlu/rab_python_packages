@@ -750,7 +750,6 @@ if __name__ == "__main__":
         try:
             no = 1
             # 打印节点信息
-            for node_protocol in r_subscription.all_node_infos:
             for node_info in r_subscription.all_node_infos["vmess"]:
                 print(no, node_info)
                 print(no, parse_node_info("vmess", node_info))
