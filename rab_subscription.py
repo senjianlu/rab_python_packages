@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: /root/Github/rab_python_packages/rab_ssr.py
+# @FILE: /root/Github/rab_python_packages/rab_subscription.py
 # @DATE: 2021/05/10 Mon
 # @TIME: 14:11:24
 #
@@ -320,6 +320,46 @@ def get_proxy_info(proxies):
         print("获取代理信息出错！" + str(e))
     return None
 
+"""
+@description: 创建容器
+-------
+@param:
+-------
+@return:
+"""
+def create_container(docker_client, image, proxy_port):
+    container = docker_client.containers.run(
+                    image=image,
+                    command="/bin/bash",
+                    # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
+                    ports={"1081/tcp": proxy_port},
+                    tty=True,
+                    detach=True)
+    return container
+
+"""
+@description: 修改容易内代理配置
+-------
+@param:
+-------
+@return:
+"""
+def configure_node(container, node_protocol, node_info):
+    # 生成修改配置文件的命令
+    configure_cmd = generate_configure_command(node_protocol, node_info)
+    # 关闭代理软件
+    print(container.exec_run(rab_config.load_package_config(
+        "rab_linux_command.ini", "rab_subscription", node_protocol+"_stop")))
+    # 初始化配置文件
+    init_command = rab_config.load_package_config(
+        "rab_linux_command.ini", "rab_subscription", node_protocol+"_init")
+    container.exec_run(init_command)
+    # 修改配置文件
+    print(container.exec_run(configure_cmd))
+    # 启动代理软件
+    print(container.exec_run(rab_config.load_package_config(
+        "rab_linux_command.ini", "rab_subscription", node_protocol+"_start")))
+
 
 """
 @description: r_subscription 类
@@ -391,7 +431,7 @@ class r_subscription:
     -------
     @return:
     """
-    def create_container(self, node_protocol):
+    def create(self, node_protocol):
         # 获取镜像名和版本
         image = rab_config.load_package_config(
             "rab_config.ini", "rab_subscription", node_protocol+"_image")
@@ -406,13 +446,8 @@ class r_subscription:
                 pass
             # 没有的情况下新建容器
             else:
-                self.ssr_container = self.docker_client.containers.run(
-                    image=image,
-                    command="/bin/bash",
-                    # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
-                    ports={"1081/tcp": self.proxy_port},
-                    tty=True,
-                    detach=True)
+                self.ssr_container = create_container(
+                    self.docker_client, image, self.proxy_port)
                 # 启动 GOST
                 self.ssr_container.exec_run(gost_start_command, detach=True)
         # VMess 协议
@@ -423,13 +458,8 @@ class r_subscription:
                 pass
             # 没有的情况下新建容器
             else:
-                self.vmess_container = self.docker_client.containers.run(
-                    image=image,
-                    command="/bin/bash",
-                    # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
-                    ports={"1081/tcp": self.proxy_port},
-                    tty=True,
-                    detach=True)
+                self.vmess_container = create_container(
+                    self.docker_client, image, self.proxy_port)
                 # 启动 GOST
                 self.vmess_container.exec_run(gost_start_command, detach=True)
         # SS 协议
@@ -440,13 +470,8 @@ class r_subscription:
                 pass
             # 没有的情况下新建容器
             else:
-                self.ss_container = self.docker_client.containers.run(
-                    image=image,
-                    command="/bin/bash",
-                    # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
-                    ports={"1081/tcp": self.proxy_port},
-                    tty=True,
-                    detach=True)
+                self.ss_container = create_container(
+                    self.docker_client, image, self.proxy_port)
                 # 启动 GOST
                 self.ss_container.exec_run(gost_start_command, detach=True)
         else:
@@ -459,57 +484,13 @@ class r_subscription:
     -------
     @return:
     """
-    def configure_node(self, node_protocol, node_info):
-        # 生成修改配置文件的命令
-        configure_cmd = generate_configure_command(node_protocol, node_info)
-        # print(configure_cmd)
+    def configure(self, node_protocol, node_info):
         if (node_protocol.lower() == "ssr"):
-            # 关闭 SSR
-            print(self.ssr_container.exec_run(rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "ssr_stop")))
-            # 初始化配置文件
-            ssr_init_command = rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "ssr_init")
-            self.ssr_container.exec_run(ssr_init_command)
-            # 修改配置文件
-            print(self.ssr_container.exec_run(configure_cmd))
-            # 启动 SSR
-            print(self.ssr_container.exec_run(rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "ssr_start")))
+            configure_node(self.ssr_container, node_protocol, node_info)
         elif(node_protocol.lower() == "vmess"):
-            # 关闭 VMess
-            print(self.vmess_container.exec_run(rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "vmess_stop")))
-            # 关闭现有的 Dcoker
-            # self.close_container(node_protocol)
-            # 新建一个 VMess2Proxy Docker
-            # self.create_container(node_protocol)
-            # 初始化配置文件
-            vmess_init_command = rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "vmess_init")
-            self.vmess_container.exec_run(vmess_init_command)
-            # 修改配置文件
-            print(self.vmess_container.exec_run(configure_cmd))
-            # 启动 VMess
-            print(self.vmess_container.exec_run(rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "vmess_start")))
+            configure_node(self.vmess_container, node_protocol, node_info)
         elif(node_protocol.lower() == "ss"):
-            # 关闭 VMess
-            print(self.ss_container.exec_run(rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "ss_stop")))
-            # 关闭现有的 Dcoker
-            # self.close_container(node_protocol)
-            # 新建一个 VMess2Proxy Docker
-            # self.create_container(node_protocol)
-            # 初始化配置文件
-            ss_init_command = rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "ss_init")
-            self.ss_container.exec_run(ss_init_command)
-            # 修改配置文件
-            print(self.ss_container.exec_run(configure_cmd))
-            # 启动 VMess
-            print(self.ss_container.exec_run(rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription", "ss_start")))
+            configure_node(self.ss_container, node_protocol, node_info)
         # 等待 3 秒等待生效
         time.sleep(3)
     
@@ -571,7 +552,7 @@ class r_subscription:
                         .replace("{"+"port"+"}", str(self.proxy_port)))
                 os.system(kill_command)
                 # 启动容器
-                self.create_container(node_protocol)
+                self.create(node_protocol)
                 return True
         # 如果没有节点可用
         print("从订阅获取到的节点列表为空，请检查！")
@@ -608,9 +589,9 @@ class r_subscription:
                     for other_node_protocol in other_node_protocols:
                         self.close_container(other_node_protocol)
                     # 开启本协议容器
-                    self.create_container(node_protocol)
+                    self.create(node_protocol)
                     # 修改容器内配置
-                    self.configure_node(node_protocol, node_info)
+                    self.configure(node_protocol, node_info)
                     # 判断更新后节点的出口 IP 是否被使用过
                     if (not self.is_proxy_ip_used()):
                         # 测试地区是否通过
@@ -750,14 +731,14 @@ if __name__ == "__main__":
         try:
             no = 1
             # 打印节点信息
-            for node_info in r_subscription.all_node_infos["vmess"]:
-                print(no, node_info)
-                print(no, parse_node_info("vmess", node_info))
-                print(no, generate_configure_command("vmess", node_info))
-                no += 1
+            # for node_info in r_subscription.all_node_infos["vmess"]:
+            #     print(no, node_info)
+            #     print(no, parse_node_info("vmess", node_info))
+            #     print(no, generate_configure_command("vmess", node_info))
+            #     no += 1
             # 测试 Docker
-            for _ in range(0, 100):
-                r_subscription.change("vmess")
+            for _ in range(0, 10):
+                r_subscription.change("ss")
                 print("以证实可使用 IP：",
                     len(r_subscription.used_proxy_ips), " 个！")
                 no += 1
