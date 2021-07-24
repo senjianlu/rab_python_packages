@@ -341,7 +341,6 @@ def confirm_alert(driver):
         return False
 
 
-
 """
 @description: 单体测试
 -------

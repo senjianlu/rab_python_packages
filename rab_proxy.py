@@ -493,5 +493,4 @@ def do_ssr_update(auto_ssr_update_oneclick_sh_path):
 @return:
 """
 if __name__ == "__main__":
-    # todo...
-    print("todo...")
+    pass
