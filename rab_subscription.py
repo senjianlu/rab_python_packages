@@ -21,6 +21,7 @@ from urllib.parse import urlparse
 import sys
 sys.path.append("..")
 from rab_python_packages import rab_config
+from rab_python_packages import rab_requests
 
 
 """
@@ -31,13 +32,13 @@ from rab_python_packages import rab_config
 @return:
 """
 def get_subscription_origin_infos(subscription_urls):
-    subscription_origin_infos = []
+    subscription_origin_infos = {}
     for subscription_url in subscription_urls:
         # 不使用代理、使用上次的 SSR 节点、使用备用节点来访问订阅地址
         try:
             # 不使用代理访问订阅链接
-            response = requests.get(subscription_url, timeout=30)
-            subscription_origin_infos.append(response.text)
+            response = rab_requests.r_get(subscription_url, timeout=30)
+            subscription_origin_infos[subscription_url] = response.text
         except Exception as e:
             print(subscription_url + " 不使用代理获取订阅原始信息出错！" \
                 + "\r\n出错信息：" + str(e))
@@ -267,14 +268,12 @@ def parse_node_info(node_protocol, node_info):
 @return:
 """
 def generate_configure_command(node_protocol, node_info):
-    # 将节点信息转为 JSON 格式并修改键值
-    parsed_node_info = parse_node_info(node_protocol, node_info)
     # 获取模板指令
     command = rab_config.load_package_config("rab_linux_command.ini",
         "rab_subscription", node_protocol+"_configure")
-    for node_info_key in parsed_node_info.keys():
+    for node_info_key in node_info.keys():
         command = command.replace("{"+node_info_key+"_4_python}",
-            str(parsed_node_info[node_info_key]))
+            str(node_info[node_info_key]))
     return command
 
 """
@@ -303,6 +302,41 @@ def get_node_id(node_protocol, node_info):
     return node_id
 
 """
+@description: 获取所有节点信息
+-------
+@param:
+-------
+@return:
+"""
+def get_all_node_infos(subscription_urls):
+    all_node_infos = {"ssr": [], "vmess":[], "ss": []}
+    # 访问所有订阅地址以获取原始信息
+    subscription_origin_infos = get_subscription_origin_infos(
+        subscription_urls)
+    # 遍历所有原始信息
+    for subscription_url in subscription_origin_infos.keys():
+        # 解密原始信息
+        subscription_info = b64decode_4_subscription(
+            subscription_origin_infos[subscription_url])
+        # 如果原始信息解密成功
+        if (subscription_info):
+            # 分割原始信息
+            node_infos = get_node_infos(subscription_info)
+            # 分协议储存
+            for node_protocol in node_infos.keys():
+                for node_info in node_infos[node_protocol]:
+                    # 转换为直接可用的订阅信息
+                    parsed_node_info = parse_node_info(
+                        node_protocol, node_info)
+                    # 节点 ID
+                    parsed_node_info["node_id"] = get_node_id(
+                        node_protocol, node_info)
+                    # 订阅地址
+                    parsed_node_info["subscription_url"] = subscription_url
+                    all_node_infos[node_protocol].append(parsed_node_info)
+    return all_node_infos
+
+"""
 @description: 获取这个代理的 IP、地区等信息
 -------
 @param:
@@ -328,9 +362,12 @@ def get_proxy_info(proxies):
 @return:
 """
 def create_container(docker_client, image, proxy_port):
+    container_name = "proxy_port_" + str(proxy_port)
+    os.system('docker rm $(docker ps -aq --filter="name=' \
+        + container_name + '")')
     container = docker_client.containers.run(
                     image=image,
-                    name="proxy_port_"+str(proxy_port),
+                    name=container_name,
                     command="/bin/bash",
                     # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
                     ports={"1081/tcp": proxy_port},
@@ -523,16 +560,9 @@ class r_subscription:
     -------
     @return:
     """
-    def get_all_node_infos(self):
-        for subscription_origin_info in get_subscription_origin_infos(
-                self.subscription_urls):
-            subscription_info = b64decode_4_subscription(
-                subscription_origin_info)
-            if (subscription_info):
-                node_infos = get_node_infos(subscription_info)
-                for node_protocol in node_infos.keys():
-                    for node_info in node_infos[node_protocol]:
-                        self.all_node_infos[node_protocol].append(node_info)
+    def get_all(self):
+        self.all_node_infos = get_all_node_infos(
+            self.subscription_urls)
 
     """
     @description: 启动容器并配置好代理，因为是本地启动不需要账户密码
@@ -543,7 +573,7 @@ class r_subscription:
     """
     def start(self):
         # 解析订阅
-        self.get_all_node_infos()
+        self.get_all()
         # 优先尝试 SSR 节点
         for node_protocol in self.all_node_infos.keys():
             if (self.all_node_infos[node_protocol]):
@@ -577,7 +607,7 @@ class r_subscription:
             # 循环所有节点
             for node_info in self.all_node_infos[node_protocol]:
                 # 节点 ID
-                node_id = get_node_id(node_protocol, node_info)
+                node_id = node_info["node_id"]
                 # 判断使用过的节点等信息是否需要清理
                 if (len(self.used_nodes) >= self.non_repetitive_node_num):
                     self.clear()
@@ -724,6 +754,7 @@ if __name__ == "__main__":
     # 获取订阅地址
     subscription_urls = rab_config.load_package_config(
         "rab_config.ini", "rab_subscription", "subscription_urls")
+    # print(get_all_node_infos(subscription_urls))
     access_test_urls = rab_config.load_package_config(
         "rab_config.ini", "rab_subscription", "access_test_urls")
     r_subscription = r_subscription(
@@ -732,14 +763,14 @@ if __name__ == "__main__":
         try:
             no = 1
             # 打印节点信息
-            # for node_info in r_subscription.all_node_infos["vmess"]:
+            # for node_info in r_subscription.all_node_infos["ssr"]:
             #     print(no, node_info)
-            #     print(no, parse_node_info("vmess", node_info))
+            #     print(no, parse_node_info("ssr", node_info))
             #     print(no, generate_configure_command("vmess", node_info))
             #     no += 1
             # 测试 Docker
             for _ in range(0, 10):
-                r_subscription.change("ss")
+                r_subscription.change("ssr")
                 print("以证实可使用 IP：",
                     len(r_subscription.used_proxy_ips), " 个！")
                 no += 1
