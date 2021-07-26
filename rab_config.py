@@ -11,6 +11,10 @@
 
 import os
 import configparser
+# 切换路径到父级
+import sys
+sys.path.append("..")
+from rab_python_packages import rab_env
 
 
 """
@@ -21,16 +25,9 @@ import configparser
 @return: 
 """
 def get_config(file_name):
+    file_path = rab_env.find_rab_file(file_name)
     config = configparser.RawConfigParser()
-    # 判断该路径下配置文件是否存在
-    if (os.path.exists(file_name)):
-        config.read(file_name, encoding="utf-8")
-    # 不在的话就在共通包中查找
-    elif(os.path.exists("rab_python_packages/"+file_name)):
-        config.read("rab_python_packages/"+file_name, encoding="utf-8")
-    # 或者在上级路径的共通包中查找
-    elif(os.path.exists("../rab_python_packages/"+file_name)):
-        config.read("../rab_python_packages/"+file_name, encoding="utf-8")
+    config.read(file_path, encoding="utf-8")
     return config
 
 """
