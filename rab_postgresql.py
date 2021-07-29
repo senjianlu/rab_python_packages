@@ -15,6 +15,7 @@ import psycopg2.extras
 import sys
 sys.path.append("..")
 from rab_python_packages import rab_logging
+from rab_python_packages import rab_config
 
 
 # 日志记录
@@ -48,13 +49,33 @@ class r_pgsql_driver():
     -------
     @return:
     """
-    def __init__(self, database, user, password, host, port):
+    def __init__(self,
+                 database=rab_config.load_package_config(
+                     "rab_config.ini", "common", "database"),
+                 user=rab_config.load_package_config(
+                     "rab_config.ini", "common", "user"),
+                 password=rab_config.load_package_config(
+                     "rab_config.ini", "common", "password"),
+                 host=rab_config.load_package_config(
+                     "rab_config.ini", "common", "host"),
+                 port=rab_config.load_package_config(
+                     "rab_config.ini", "common", "port"),
+                 show_column_name=False):
+        # 数据库名
         self.database = database
+        # 用户
         self.user = user
+        # 密码
         self.password = password
+        # IP 或域名
         self.host = host
+        # 端口
         self.port = port
+        # 是否显示列名
+        self.show_column_name = show_column_name
+        # 指针
         self.cur = None
+        # 与数据库之间的连接
         self.conn = None
 
     """
@@ -71,7 +92,12 @@ class r_pgsql_driver():
                                      password=self.password,
                                      host=self.host,
                                      port=self.port)
-        self.cur = self.conn.cursor() #创建指针对象
+        #创建指针对象
+        if (self.show_column_name):
+            self.cur = self.conn.cursor(
+                cursor_factory=psycopg2.extras.RealDictCursor)
+        else:
+            self.cur = self.conn.cursor()
 
     """
     @description: 测试数据库连接是否可用
@@ -99,13 +125,7 @@ class r_pgsql_driver():
     @return:
     """
     def reconnect(self):
-        if (not (self.cur and self.conn)):
-            self.create()
-        else:
-            # 暂时注释以等待较好的重连解决方法
-            # self.conn = self.conn.reconnect()
-            # self.cur = self.conn.cursor()
-            self.create()
+        self.create()
 
     """
     @description: 关闭数据库连接
@@ -243,5 +263,4 @@ class r_pgsql_driver():
 @return:
 """
 if __name__ == "__main__":
-    # todo...
-    print("todo...")
+    pass

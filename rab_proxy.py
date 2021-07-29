@@ -2,163 +2,193 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: \rab_python_packages\rab_proxy.py
-# @DATE: 2020/12/15 Tue
-# @TIME: 19:46:49
+# @FILE: /root/GitHub/rab_python_packages/rab_proxy.py
+# @DATE: 2021/07/27 Tue
+# @TIME: 17:42:23
 #
 # @DESCRIPTION: 共通包 代理获取模块
 
 
-import os
-import json
-import time
-import hashlib
 import requests
-import psycopg2
-import psycopg2.extras
+import random
 # 切换路径到父级
 import sys
 sys.path.append("..")
-from rab_python_packages import rab_logging
-from rab_python_packages import rab_pgsql_driver
-
-
-# 日志记录
-rab_proxy_logger = rab_logging.build_rab_logger()
+from rab_python_packages import rab_postgresql
+from rab_python_packages import rab_config
+from rab_python_packages import rab_requests
 
 
 """
-@description: 从数据库获取所有代理 IP 和其对应代理端口
+@description: 获取自建代理
 -------
 @param:
 -------
-@return: proxies<dict>
+@return:
 """
-def get_proxies(database, user, password, host, port, table_name, area=None):
-    # 连接数据库并执行 SQL 语句
-    r_pgsql_driver = rab_pgsql_driver.r_pgsql_driver(database=database,
-                                                     user=user,
-                                                     password=password,
-                                                     host=host,
-                                                     port=port)
-    r_pgsql_driver.create()
-    # 带表列名返回
-    r_pgsql_driver.cur = r_pgsql_driver.conn.cursor(
-        cursor_factory=psycopg2.extras.RealDictCursor)
-    if (area):
-        sql = "SELECT * FROM " + str(table_name) + " WHERE 1 = 1 AND " \
-              + "sps_ip_location = '" + area + "'"
-    else:
-        sql = "SELECT * FROM " + str(table_name) + " WHERE 1 = 1"
-    select_result = r_pgsql_driver.select(sql)
-    # 初始化不同代理池的列表
-    proxies = {}
-    ips = []
-    reverse_ips = []
-    http_ips = []
-    socks5_ips = []
-    # 遍历
-    for row in select_result:
-        # IP 池
-        ips.append(row["sps_domain"])
-        # 反向代理
-        if (row["sps_reverse_proxy_port"]):
-            # 80 端口直接访问域名即可
-            if (int(row["sps_reverse_proxy_port"]) == 80):
-                reverse_ips.append(row["sps_domain"])
-            else:
-                reverse_ips.append("http://" \
-                                   + row["sps_domain"] \
-                                   + ":" \
-                                   + row["sps_reverse_proxy_port"])
-        # HTTP 代理
-        if (row["sps_http_proxy_port"]):
-            # 如果有认证信息则直接拼接至代理信息
-            if (row["sps_http_auth_info"]):
-                http_ips.append("http://" \
-                                + row["sps_http_auth_info"] \
-                                + "@" \
-                                + row["sps_domain"] \
-                                + ":"
-                                + row["sps_http_proxy_port"])
-            else:
-                http_ips.append("http://" \
-                                + row["sps_domain"] \
-                                + ":"
-                                + row["sps_http_proxy_port"])
-        # SOCKS5 代理
-        if (row["sps_socks5_proxy_port"]):
-            # 如果有认证信息则直接拼接至代理信息
-            if (row["sps_socks5_auth_info"]):
-                socks5_ips.append("socks5://" \
-                                  + row["sps_socks5_auth_info"] \
-                                  + "@" \
-                                  + row["sps_domain"] \
-                                  + ":"
-                                  + row["sps_socks5_proxy_port"])
-            else:
-                socks5_ips.append("socks5://" \
-                                  + row["sps_domain"] \
-                                  + ":"
-                                  + row["sps_socks5_proxy_port"])
-    proxies["ips"] = ips
-    proxies["reverse_ips"] = reverse_ips
-    proxies["http_ips"] = http_ips
-    proxies["socks5_ips"] = socks5_ips
-    return proxies
+def get_personal_proxy_infos(location=None):
+    personal_proxy_infos = {}
+    for personal_proxy in rab_config.load_package_config(
+            "rab_config.ini", "common", "proxy"):
+        proxy_method = personal_proxy.split("://")[0]
+        if (proxy_method not in personal_proxy_infos.keys()):
+            personal_proxy_infos[proxy_method] = {}
+        out_ip = personal_proxy.split("://")[1].split("@")[1].split(":")[0]
+        personal_proxy_info = {
+            "host": out_ip,
+            "port": personal_proxy.split("://")[1].split("@")[1].split(":")[1],
+            "auth": personal_proxy.split("://")[1].split("@")[0],
+            "access": {},
+            "level": 10
+        }
+        if (location):
+            # 将代理转换并测试代理所在地区
+            ip_info = rab_requests.get_ip_info(
+                parse_proxy_info(proxy_method, personal_proxy_info))
+            if (ip_info["location"] == location):
+                personal_proxy_infos[proxy_method][out_ip] = personal_proxy_info
+        else:
+            personal_proxy_infos[proxy_method][out_ip] = personal_proxy_info
+    return personal_proxy_infos
 
 """
-@description: 初始化代理使用次数统计字典
+@description: 获取指定地区下所有可用代理
 -------
-@param: proxies<dict>
--------
-@return: usage_counts<dict>
-"""
-def init_usage_counts(proxies):
-    usage_counts = {}
-    usage_counts["reverse_usage_counts"] = {}
-    usage_counts["http_usage_counts"] = {}
-    usage_counts["socks5_usage_counts"] = {}
-    for proxy in proxies["reverse_ips"]:
-        usage_counts["reverse_usage_counts"][proxy] = 0
-    for proxy in proxies["http_ips"]:
-        usage_counts["http_usage_counts"][proxy] = 0
-    for proxy in proxies["socks5_ips"]:
-        usage_counts["socks5_usage_counts"][proxy] = 0
-    return usage_counts
-
-"""
-@description: 用讯代理订单号请求返回代理和头
--------
-@param: orderno<str>
+@param:
 -------
 @return:
 """
-def init_xdaili_proxy(orderno, secret):
-    # 拼接获取 IP 的源地址
-    ip = "forward.xdaili.cn"
-    port = "80"
-    ip_port = ip + ":" + port
-    # 获取 MD5 加密源
-    timestamp = str(int(time.time()))
-    string = "orderno=" + orderno + "," + "secret=" + secret + "," \
-             + "timestamp=" + timestamp
-    # Python3 转码    
-    string = string.encode()
-    # MD5 加密
-    md5_string = hashlib.md5(string).hexdigest()
-    sign = md5_string.upper()
-    auth = "sign=" + sign + "&" + "orderno=" + orderno + "&" \
-           + "timestamp=" + timestamp
-    # 拼接头和代理信息
-    proxy = {"http": "http://" + ip_port, "https": "http://" + ip_port}
-    headers = {
-        "Proxy-Authorization": auth,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " \
-                      + "AppleWebKit/537.36 (KHTML, like Gecko) " \
-                      + "Chrome/86.0.4240.198 Safari/537.36"
+def get_proxy_infos(location=None, level=None):
+    # 代理信息存储
+    proxy_infos = {
+        "reverse": {},
+        "http": {},
+        "socks5":{}
     }
-    return proxy, headers
+    # 如果对代理等级无要求，则从数据库中搜索出其他代理
+    if (not level or level < 10):
+        proxy_database = rab_config.load_package_config(
+            "rab_config.ini", "rab_proxy", "proxy_database")
+        # 数据库连接
+        r_pgsql_driver = rab_postgresql.r_pgsql_driver(
+            proxy_database, show_column_name=True)
+        # 搜索所有代理
+        select_sql = """
+            SELECT
+                *
+            FROM
+                (SELECT
+                    sp_ip AS host,
+                    sp_out_ip AS out_ip,
+                    sp_location AS location,
+                    '' AS reverse_proxy_port,
+                    '' AS reverse_auth_info,
+                    sp_http_proxy_port AS http_proxy_port,
+                    sp_http_auth_info AS http_auth_info,
+                    sp_socks5_proxy_port AS socks5_proxy_port,
+                    sp_socks5_auth_info AS socks5_auth_info,
+                    sp_access_info AS access_info,
+                    sp_status AS status,
+                    5 AS level
+                FROM
+                    sa_proxy
+                WHERE
+                    1 = 1
+                UNION
+                SELECT
+                    sps_host AS host,
+                    sps_ip AS out_ip,
+                    sps_location AS location,
+                    sps_reverse_proxy_port AS reverse_proxy_port,
+                    '' AS reverse_auth_info,
+                    sps_http_proxy_port AS http_proxy_port,
+                    sps_http_auth_info AS http_auth_info,
+                    sps_socks5_proxy_port AS socks5_proxy_port,
+                    sps_socks5_auth_info AS socks5_auth_info,
+                    sps_access_info AS access_info,
+                    sps_status AS status,
+                    8 AS level
+                FROM
+                    sa_proxy_server
+                WHERE
+                    1 = 1
+                ) proxy
+            WHERE
+                1 = 1
+            AND status = 1
+        """
+        # 如果有地区限制，多加一行搜索条件
+        if (location):
+            select_filter_2_append = """
+                AND proxy.location = '{}'
+            """.format(location)
+            select_sql = select_sql + select_filter_2_append
+        # 搜索
+        result = r_pgsql_driver.select(select_sql)
+        # 将搜索出的数据转为代理字典
+        for row in result:
+            for proxy_method in proxy_infos.keys():
+                # 如果端口有服务
+                if (row[proxy_method+"_proxy_port"]):
+                    # 出口 IP 作为主键
+                    out_ip = row["out_ip"]
+                    # 代理信息
+                    proxy_info = {
+                        "host": row["host"],
+                        "port": row[proxy_method+"_proxy_port"],
+                        "auth": row[proxy_method+"_auth_info"],
+                        "access": row["access_info"],
+                        "level": row["level"]
+                    }
+                    proxy_infos[proxy_method][out_ip] = proxy_info
+                # 端口无服务说明此代理不存在
+                else:
+                    pass
+    return proxy_infos
+
+"""
+@description: 初始化代理使用次数
+-------
+@param:
+-------
+@return:
+"""
+def init_ip_usage_counts(proxy_infos):
+    ip_usage_counts = {}
+    for proxy_method in proxy_infos.keys():
+        for out_ip in proxy_infos[proxy_method]:
+            for web in proxy_infos[proxy_method][out_ip]["access"].keys():
+                # 如果还不存在这个网站对应的列表则进行新建
+                if (web not in ip_usage_counts.keys()):
+                    ip_usage_counts[web] = {}
+                # 如果可以访问，从 0 开始计数
+                if (proxy_infos[proxy_method][out_ip]["access"][web]):
+                    ip_usage_counts[web][out_ip] = 0
+    return ip_usage_counts
+
+"""
+@description: 根据代理信息和协议将代理可用化
+-------
+@param:
+-------
+@return:
+"""
+def parse_proxy_info(proxy_method, proxy_info):
+    # 反代
+    if (proxy_method == "reverse"):
+        return "http://{host}:{port}".format(**proxy_info)
+    # HTTP 代理
+    elif(proxy_method == "http"):
+        return {
+            "http": "http://{auth}@{host}:{port}".format(**proxy_info),
+            "https": "http://{auth}@{host}:{port}".format(**proxy_info),
+        }
+    # SOCKS5 代理
+    elif(proxy_method == "socks5"):
+        return {
+            "http": "socks5h://{auth}@{host}:{port}".format(**proxy_info),
+            "https": "socks5h://{auth}@{host}:{port}".format(**proxy_info),
+        }
 
 
 """
@@ -168,7 +198,7 @@ def init_xdaili_proxy(orderno, secret):
 -------
 @return:
 """
-class r_proxy:
+class r_proxy():
 
     """
     @description: 初始化
@@ -177,312 +207,103 @@ class r_proxy:
     -------
     @return:
     """
-    def __init__(self,
-                 database,
-                 user,
-                 password,
-                 host,
-                 port,
-                 table_name,
-                 area=None):
-        self.proxies = get_proxies(database=database,
-                                   user=user,
-                                   password=password,
-                                   host=host,
-                                   port=port,
-                                   table_name=table_name,
-                                   area=area)
-        self.usage_counts = init_usage_counts(self.proxies)
-        self.web_accesses = {}
-        self.web_accesses_usage_counts = {}
-        self.xdaili_ordernos = []
-        self.xdaili_secret = None
-        self.xdaili_ordernos_usage_counts = {}
-        self.timeout = 20
+    def __init__(self, location=None, level=None):
+        # 所有代理信息
+        self.proxy_infos = get_proxy_infos(location, level)
+        # 各个网站中各个代理的访问次数
+        self.ip_usage_counts = init_ip_usage_counts(self.proxy_infos)
     
     """
     @description: 获取一个可用代理
     -------
-    @param: proxy_method<str>
-    -------
-    @return: proxies(requests.get用)
-    """
-    def get_proxy(self, proxy_method=None, web=None):
-        # 指定需要代理的网站时
-        if (not proxy_method and web):
-            web = web.lower()
-            proxies_4_choose = self.web_accesses_usage_counts[web
-                                                              + "_usage_counts"]
-            min_proxy = min(proxies_4_choose, key=proxies_4_choose.get)
-            self.web_accesses_usage_counts[web + "_usage_counts"][min_proxy] \
-                = proxies_4_choose[min_proxy] + 1
-            # 默认为 HTTP 代理形式
-            min_proxy = {
-                "http": min_proxy,
-                "https": min_proxy
-            }
-        elif (proxy_method and not web):
-            proxy_method = proxy_method.lower()
-            # 取使用次数最少的代理返回
-            proxies_4_choose = self.usage_counts[proxy_method
-                                                 + "_usage_counts"]
-            min_proxy = min(proxies_4_choose, key=proxies_4_choose.get)
-            self.usage_counts[proxy_method + "_usage_counts"][min_proxy] \
-                = proxies_4_choose[min_proxy] + 1
-            # 反代时无需任何处理直接返回 IP 或域名
-            if (proxy_method.lower() == "reverse"):
-                pass
-            # HTTP 代理获取时，构造指定代理样式返回
-            elif(proxy_method.lower() == "http"):
-                min_proxy = {
-                    "http": min_proxy,
-                    "https": min_proxy
-                }
-            # SOCKS5 代理获取时，构造指定代理样式返回
-            elif(proxy_method.lower() == "socks5"):
-                min_proxy = {
-                    "socks5": min_proxy,
-                    "socks5": min_proxy
-                }
-        return min_proxy
-
-    """
-    @description: 测试所有代理可用性
-    -------
-    @param: proxy_method<str>
-    -------
-    @return:
-    """
-    def test_proxies(self, proxy_method="all"):
-        proxy_method = proxy_method.lower()
-        # 反向代理
-        if (proxy_method == "all" or proxy_method == "reverse"):
-            for ip in self.proxies["reverse_ips"]:
-                try:
-                    url = "http://" + str(ip) + "/market/priceoverview/"
-                    params = {
-                        "appid": "730",
-                        "currency": "1",
-                        "market_hash_name": "Clutch Case"
-                    }
-                    res = requests.get(url,
-                                       params=params,
-                                       timeout=self.timeout)
-                    # 正常返回
-                    if (res.status_code != 200):
-                        info_msg = str(ip) \
-                                    + " 反向代理失效！相应代码：" \
-                                    + str(res.status_code) + " " \
-                                    + str(res.text)
-                        self.usage_counts["reverse_usage_counts"][ip] = 9999
-                    else:
-                        info_msg = str(ip) + " 反向代理可用！"
-                        self.usage_counts["reverse_usage_counts"][ip] += 1
-                    rab_proxy_logger.info(info_msg)
-                except Exception as e:
-                    error_msg = str(ip) + " 反向代理出错！" + str(e)
-                    rab_proxy_logger.error(error_msg)
-                    self.usage_counts["reverse_usage_counts"][ip] = 9999
-        # HTTP 代理
-        if (proxy_method == "all" or proxy_method == "http"):
-            for ip in self.proxies["http_ips"]:
-                try:
-                    http_proxies = {
-                        "http": ip,
-                        "https": ip
-                    }
-                    url = "http://ip-api.com/json/?lang=zh-CN"
-                    res = requests.get(url,
-                                       proxies=http_proxies,
-                                       timeout=self.timeout)
-                    # 正常返回
-                    if (res.status_code != 200):
-                        info_msg = str(ip) \
-                                    + " HTTP 代理失效！相应代码：" \
-                                    + str(res.status_code) + " " \
-                                    + str(res.text)
-                        self.usage_counts["http_usage_counts"][ip] = 9999
-                    else:
-                        res_json = json.loads(res.text)
-                        if (str(ip).split(":")[0] == res_json.get("query")):
-                            info_msg = str(ip) + " HTTP 代理可用！"
-                            self.usage_counts["http_usage_counts"][ip] += 1
-                        else:
-                            info_msg = str(ip) + " HTTP 代理失效！ip不相符！"
-                            self.usage_counts["http_usage_counts"][ip] = 9999
-                    rab_proxy_logger.info(info_msg)
-                except Exception as e:
-                    error_msg = str(ip) + " HTTP 代理出错！" + str(e)
-                    rab_proxy_logger.error(error_msg)
-                    self.usage_counts["http_usage_counts"][ip] = 9999
-        # SOCKS5 代理
-        if (proxy_method == "all" or proxy_method == "socks5"):
-            for ip in self.proxies["socks5_ips"]:
-                try:
-                    http_proxies = {
-                        "http": ip,
-                        "https": ip
-                    }
-                    url = "http://ip-api.com/json/?lang=zh-CN"
-                    res = requests.get(url,
-                                       proxies=http_proxies,
-                                       timeout=self.timeout)
-                    # 正常返回
-                    if (res.status_code != 200):
-                        info_msg = str(ip) \
-                                    + " SOCKS5 代理失效！相应代码：" \
-                                    + str(res.status_code) + " " \
-                                    + str(res.text)
-                        self.usage_counts["socks5_usage_counts"][ip] = 9999
-                    else:
-                        res_json = json.loads(res.text)
-                        if (str(ip).split(":")[0] == res_json.get("query")):
-                            info_msg = str(ip) + " SOCKS5 代理可用！"
-                            self.usage_counts["socks5_usage_counts"][ip] += 1
-                        else:
-                            info_msg = str(ip) + " SOCKS5 代理失效！ip不相符！"
-                            self.usage_counts["socks5_usage_counts"][ip] = 9999
-                    rab_proxy_logger.info(info_msg)
-                except Exception as e:
-                    error_msg = str(ip) + " SOCKS5 代理出错！" + str(e)
-                    rab_proxy_logger.error(error_msg)
-                    self.usage_counts["socks5_usage_counts"][ip] = 9999
-
-    """
-    @description: 测试网站访问
-    -------
-    @param: web<str>, web_url<str>, num<int>,
-    -------
-    @return:
-    """
-    def test_web_access(self, web, web_url="https://stapi.cn", num=20):
-        web = web.lower()
-        # STEAM 访问测试（中国网络特殊阻断，需要反代）
-        if (web == "steam"):
-            steam_access_ips = []
-            self.web_accesses_usage_counts["steam_usage_counts"] = {}
-            for ip in self.proxies["reverse_ips"]:
-                # 如果取到了指定数量，直接返回
-                if (len(steam_access_ips) >= num):
-                    break
-                try:
-                    url = str(ip) + "/market/priceoverview/"
-                    params = {
-                        "appid": "730",
-                        "currency": "1",
-                        "market_hash_name": "Clutch Case"
-                    }
-                    res = requests.get(url,
-                                       params=params,
-                                       timeout=self.timeout)
-                    # 正常返回
-                    if (res.status_code != 200):
-                        info_msg = str(ip) \
-                                   + " 无法访问 STEAM ！相应代码：" \
-                                   + str(res.status_code) + " " \
-                                   + str(res.text)
-                        self.web_accesses_usage_counts.get(
-                            "steam_usage_counts")[ip] = 9999
-                    else:
-                        info_msg = str(ip) + " 成功访问 STEAM ！"
-                        steam_access_ips.append(ip)
-                        self.web_accesses_usage_counts.get(
-                            "steam_usage_counts")[ip] = 1
-                    rab_proxy_logger.info(info_msg)
-                except Exception as e:
-                    error_msg = str(ip) + " 访问 STEAM 出错！" + str(e)
-                    rab_proxy_logger.error(error_msg)
-                    self.web_accesses_usage_counts.get(
-                        "steam_usage_counts")[ip] = 9999
-            self.web_accesses["steam_access_ips"] = steam_access_ips
-        else:
-            web_access_ips = []
-            self.web_accesses_usage_counts[web+"_usage_counts"] = {}
-            for ip in self.proxies["http_ips"]:
-                # 如果取到了指定数量，直接返回
-                if (len(web_access_ips) >= num):
-                    break
-                try:
-                    http_proxies = {
-                        "http": ip,
-                        "https": ip
-                    }
-                    url = web_url
-                    res = requests.get(url,
-                                       proxies=http_proxies,
-                                       timeout=self.timeout)
-                    # 正常返回
-                    if (res.status_code != 200):
-                        info_msg = str(ip) \
-                                   + " 无法访问 " \
-                                   + web.upper() \
-                                   + " ！响应代码：" \
-                                   + str(res.status_code) + " " \
-                                   + str(res.text)
-                        self.web_accesses_usage_counts.get(
-                            web+"_usage_counts")[ip] = 9999
-                    else:
-                        info_msg = str(ip) + " 成功访问 " + web.upper() + " ！"
-                        web_access_ips.append(ip)
-                        self.web_accesses_usage_counts.get(
-                            web+"_usage_counts")[ip] = 1
-                    rab_proxy_logger.info(info_msg)
-                except Exception as e:
-                    error_msg = str(ip) + " 访问 " + web.upper() + " 出错！" \
-                                + str(e)
-                    rab_proxy_logger.error(error_msg)
-                    self.web_accesses_usage_counts.get(
-                        web+"_usage_counts")[ip] = 9999
-            self.web_accesses[web+"_access_ips"] = web_access_ips
-
-    """
-    @description: 设置讯代理用户密钥
-    -------
     @param:
     -------
     @return:
     """
-    def set_xdaili_secret(self, xdaili_secret):
-        self.xdaili_secret = xdaili_secret
-
-    """
-    @description: 为讯代理添加一个动态转发订单
-    -------
-    @param: 
-    -------
-    @return: <bool>
-    """
-    def add_xdaili_orderno(self, orderno):
-        if (orderno not in self.xdaili_ordernos):
-            self.xdaili_ordernos.append(orderno)
-            self.xdaili_ordernos_usage_counts[orderno] = 0
-            return True
+    def get(self, web, proxy_method="socks5"):
+        web = web.lower()
+        # 获取这个对这个网站所筛选出的出口 IP 访问次数
+        filtered_ip_usage_counts = {}
+        # 如果已经有了既存的访问可行性数据
+        if (web in self.ip_usage_counts.keys()):
+            for out_ip in self.ip_usage_counts[web]:
+                # 如果这个 IP 能支持指定的代理方式
+                if (out_ip in self.proxy_infos[proxy_method].keys()):
+                    filtered_ip_usage_counts[out_ip] \
+                        = self.ip_usage_counts[web][out_ip]
+        # 如果没有访问可行性数据，则报错
         else:
-            return False
+            print("暂时没有针对网站：" + web + " 的代理访问可行性测试！")
+            return None
+        # 获取使用次数最少的那个代理
+        least_used_ip = min(
+            filtered_ip_usage_counts, key=filtered_ip_usage_counts.get)
+        # 将使用次数加 1
+        self.ip_usage_counts[web][least_used_ip] += 1
+        # 将这个代理的所有信息根据传入协议转换为直接可用的代理
+        serviceable_proxy = parse_proxy_info(
+            proxy_method, self.proxy_infos[proxy_method][least_used_ip])
+        return serviceable_proxy
     
     """
-    @description: 获取一个讯代理转发和头
+    @description: Ban 掉无法使用的 IP
     -------
     @param:
     -------
     @return:
     """
-    def get_xdaili_proxy(self):
-        proxies_4_choose = self.xdaili_ordernos_usage_counts
-        min_orderno = min(proxies_4_choose, key=proxies_4_choose.get)
-        self.xdaili_ordernos_usage_counts[min_orderno] \
-            = proxies_4_choose[min_orderno] + 1
-        return init_xdaili_proxy(min_orderno, self.xdaili_secret)
-
-"""
-@description: 更新 SSR 订阅
--------
-@param:
--------
-@return:
-"""
-def do_ssr_update(auto_ssr_update_oneclick_sh_path):
-    os.system("sh " + auto_ssr_update_oneclick_sh_path)
+    def ban(self, out_ip, web=None):
+        # 如果不传入网站，则说明节点已经不通，直接去除
+        if (web and web in self.ip_usage_counts.keys()):
+            if (out_ip in self.ip_usage_counts[web].keys()):
+                del self.ip_usage_counts[web][out_ip]
+            else:
+                pass
+        # 如果不传入网站，则说明节点已经不通，直接去除
+        else:
+            for web in self.ip_usage_counts.keys():
+                if (out_ip in self.ip_usage_counts[web].keys()):
+                    del self.ip_usage_counts[web][out_ip]
+                else:
+                    pass
+    
+    """
+    @description: 代理访问网站可行性的临时测试
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def temporary_test_access(self,
+                              web,
+                              test_url,
+                              num_2_test=None,
+                              proxy_method="socks5"):
+        print("代理对站点的临时访问测试开始！站点名：{web} 地址：{test_url}".format(
+            web=web, test_url=test_url))
+        # 新建这个网站的代理使用次数统计
+        self.ip_usage_counts[web] = {}
+        # 如果没有指定测试代理数，默认从代理池中取出一半的代理进行测试，最多选出 10 个
+        if (not num_2_test
+                and len(list(self.proxy_infos[proxy_method].keys())) <= 20):
+            num_2_test = len(list(self.proxy_infos[proxy_method].keys())) // 2
+        elif(not num_2_test):
+            num_2_test = 10
+        print("总测试代理数：" + str(num_2_test))
+        # 遍历这些代理
+        for out_ip in random.sample(list(
+                self.proxy_infos[proxy_method].keys()), num_2_test):
+            # 如果测试访问通过，记使用次数 1 次
+            if (rab_requests.test(test_url, proxies=parse_proxy_info(
+                    proxy_method, self.proxy_infos[proxy_method][out_ip]))):
+                self.ip_usage_counts[web][out_ip] = 1
+        # 最后如果测试完这个网站无可访问节点，则直接删除次数统计
+        if (not self.ip_usage_counts[web]):
+            del self.ip_usage_counts[web]
+            print("测试完成，无可访问 {web} 的代理。".format(web=web))
+        else:
+            print("测试完成！访问 {web} 可使用代理的个数：{num}".format(
+                web=web, num=str(len(self.ip_usage_counts[web].keys()))))
 
 
 """
