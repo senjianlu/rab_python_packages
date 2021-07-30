@@ -31,7 +31,7 @@ def build_logger():
     # 默认打印和记录日志等级为：info
     logging.basicConfig(filemode="a",
                         format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
-                        datefmt="%Y-%m-%d %H:%M:%S",
+                        datefmt="%Y/%m/%d %H:%M:%S",
                         level=logging.INFO)
     logger = logging.getLogger("RAB_LOGGER")
     # 在 rab_python_packages 同级目录下创建 rab_logs 日志存放用文件夹
@@ -45,7 +45,7 @@ def build_logger():
         os.makedirs(rab_logs_path)
     # 以天为单位存储日志
     fh = logging.FileHandler(
-        (rab_logs_path+"/{:%Y-%m-%d}.log").format(datetime.now()))
+        (rab_logs_path+"/{:%Y%m%d}.log").format(datetime.now()))
     # 日志存储格式
     formatter = logging.Formatter("%(asctime)s | %(levelname)-8s | " \
                                   + "%(filename)s | %(funcName)s | " \

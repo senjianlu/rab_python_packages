@@ -196,7 +196,7 @@ class r_pgsql_driver():
     -------
     @return: <bool>
     """
-    def execute_many(self, sql, data):
+    def execute_many(self, sql, data, page_size=get_batch_size()):
         # 测试当前连接是否可用，不可用则重连
         if (not self.test_connection()):
             self.reconnect()
@@ -207,7 +207,7 @@ class r_pgsql_driver():
             psycopg2.extras.execute_batch(self.cur,
                                           sql,
                                           data,
-                                          page_size=get_batch_size())
+                                          page_size=page_size)
             self.conn.commit()
             r_logger.info("数据插入或更新成功！")
             r_logger.info("SQL 文："+str(sql))
@@ -217,7 +217,7 @@ class r_pgsql_driver():
             r_logger.error("数据插入或更新失败！")
             r_logger.error(e)
             r_logger.error("SQL 文："+str(sql))
-            r_logger.error("数据："+str(sql))
+            r_logger.error("数据："+str(data))
             return False
 
     """
