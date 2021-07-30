@@ -133,7 +133,7 @@ class r_requests():
                     proxies=proxies, timeout=timeout)
                 return r_r
             except Exception as e:
-                print("r_requests.get 第 {try_no} 次访问出错！{e}".format(
+                r_logger.info("r_requests.get 第 {try_no} 次访问出错！{e}".format(
                     try_no=str(try_no), e=str(e)))
                 continue
         # 尝试了最大次数后仍然失败
