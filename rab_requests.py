@@ -13,8 +13,13 @@ import json
 import requests
 # 切换路径到父级
 import sys
-sys.path.append("..")
+sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
+from rab_python_packages import rab_logging
+
+
+# 日志记录
+r_logger = rab_logging.r_logger()
 
 
 """
@@ -36,7 +41,8 @@ def get_ip_info(proxies=None,
             "location": json.loads(r.text)["country"]
         }
     except Exception as e:
-        print("获取 IP 信息出错！" + str(e))
+        r_logger.error("获取 IP 信息出错！")
+        r_logger.error(e)
         return {"ip": None, "location": None}
 
 """
@@ -56,15 +62,17 @@ def test(test_url,
     try:
         r = requests.get(test_url, proxies=proxies, timeout=timeout)
         if (r.status_code in success_status_codes):
-            print("测试访问地址：{test_url} 成功！".format(test_url=test_url))
+            r_logger.info(
+                "测试访问地址：{test_url} 成功！".format(test_url=test_url))
             success_flg = True
         else:
-            print("测试访问地址：{test_url} 不通过！响应代码：{status_code}".format(
-                test_url=test_url, status_code=str(r.status_code)))
+            r_logger.info(
+                "测试访问地址：{test_url} 不通过！响应代码：{status_code}".format(
+                    test_url=test_url, status_code=str(r.status_code)))
     except Exception as e:
-        print("测试访问地址：{test_url} 出错！错误信息：{e}".format(
+        r_logger.info("测试访问地址：{test_url} 出错！错误信息：{e}".format(
             test_url=test_url, e=str(e)))
-    print("使用的代理：{proxies}".format(proxies=str(proxies)))
+    r_logger.info("使用的代理：{proxies}".format(proxies=str(proxies)))
     return success_flg
 
 
@@ -129,7 +137,7 @@ class r_requests():
                     try_no=str(try_no), e=str(e)))
                 continue
         # 尝试了最大次数后仍然失败
-        print("共 {max_retry_num} 次访问出错，达到上限访问结束！".format(
+        r_logger.warn("共 {max_retry_num} 次访问出错，达到上限访问结束！".format(
             str(self.max_retry_num)))
         return None
 

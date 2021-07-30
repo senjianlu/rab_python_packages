@@ -13,7 +13,7 @@ import os
 
 
 """
-@description: 查找文件
+@description: 查找包内文件
 -------
 @param:
 -------
@@ -35,6 +35,26 @@ def find_rab_file(rab_file_name):
         else:
             if (os.path.exists(rab_file_name)):
                 return rab_file_name
+
+"""
+@description: 查找包路径
+-------
+@param:
+-------
+@return:
+"""
+def find_rab_python_packages_path():
+    paths = [
+        None,
+        "../"
+    ]
+    for path in paths:
+        if (path):
+            if (os.path.exists(path + "rab_python_packages")):
+                return path
+        else:
+            if (os.path.exists("rab_python_packages")):
+                return path
 
 """
 @description: 环境安装 Yum
