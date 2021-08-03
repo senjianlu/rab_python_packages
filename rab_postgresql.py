@@ -13,24 +13,25 @@ import psycopg2
 import psycopg2.extras
 # 切换路径到父级
 import sys
-sys.path.append("..")
+sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_logging
 from rab_python_packages import rab_config
 
 
 # 日志记录
-rab_pgsql_driver_logger = rab_logging.build_rab_logger()
+r_logger = rab_logging.r_logger()
 
 
 """
-@description: 批量插入数值获取
+@description: 获取批量插入数值
 -------
 @param:
 -------
 @return: batch_size<int>
 """
 def get_batch_size():
-    return 500
+    return int(rab_config.load_package_config(
+                "rab_config.ini", "rab_postgresql", "batch_size"))
 
 
 """
@@ -153,18 +154,17 @@ class r_pgsql_driver():
         # 测试当前连接是否可用，不可用则重连
         if (not self.test_connection()):
             self.reconnect()
-        sql = "DELETE FROM " + str(table_name)
+        sql = "DELETE FROM {}".format(table_name)
         try:
             self.cur.execute(sql)
             self.conn.commit()
-            rab_pgsql_driver_logger.info(str(table_name) + " 表清空成功！")
-            result_bool = True
+            r_logger.info("{} 表清空成功！".format(table_name))
+            return True
         except Exception as e:
-            rab_pgsql_driver_logger.error(str(table_name) \
-                                        + " 表清空失败！" \
-                                        + str(e))
-            result_bool = False
-        return result_bool
+            r_logger.error("{} 表清空失败！".format(table_name))
+            r_logger.error(e)
+            r_logger.error("SQL 文："+str(sql))
+            return False
 
     """
     @description: 执行单一 SQL 语句
@@ -180,14 +180,14 @@ class r_pgsql_driver():
         try:
             self.cur.execute(sql)
             self.conn.commit()
-            rab_pgsql_driver_logger.info(str(sql) + " SQL 执行成功！")
-            result_bool = True
+            r_logger.info("SQL 执行成功！")
+            r_logger.info("SQL 文："+str(sql))
+            return True
         except Exception as e:
-            rab_pgsql_driver_logger.error(str(sql) \
-                                        + " SQL 执行失败！" \
-                                        + str(e))
-            result_bool = False
-        return result_bool
+            r_logger.error("SQL 执行失败！")
+            r_logger.error(e)
+            r_logger.error("SQL 文："+str(sql))
+            return False
 
     """
     @description: 根据提供的 SQL 语句处理多条数据
@@ -196,7 +196,7 @@ class r_pgsql_driver():
     -------
     @return: <bool>
     """
-    def execute_many(self, sql, data):
+    def execute_many(self, sql, data, page_size=get_batch_size()):
         # 测试当前连接是否可用，不可用则重连
         if (not self.test_connection()):
             self.reconnect()
@@ -207,22 +207,18 @@ class r_pgsql_driver():
             psycopg2.extras.execute_batch(self.cur,
                                           sql,
                                           data,
-                                          page_size=get_batch_size())
+                                          page_size=page_size)
             self.conn.commit()
-            rab_pgsql_driver_logger.info(" 数据处理成功！" \
-                                        + "\r SQL 语句：" + str(sql) \
-                                        + "\r 数据：" + str(data)[0:40] \
-                                        + "..." \
-                                        + " 长度：" + str(len(data)))
-            result_bool = True
+            r_logger.info("数据插入或更新成功！")
+            r_logger.info("SQL 文："+str(sql))
+            r_logger.info("数据："+str(data)[0:40]+"......行数："+str(len(data)))
+            return True
         except Exception as e:
-            rab_pgsql_driver_logger.error(" 数据处理失败！" \
-                                        + str(e) \
-                                        + "\r SQL 语句：" + str(sql) \
-                                        + "\r 数据：" + str(data)
-                                        + " 长度：" + str(len(data)))
-            result_bool = False
-        return result_bool
+            r_logger.error("数据插入或更新失败！")
+            r_logger.error(e)
+            r_logger.error("SQL 文："+str(sql))
+            r_logger.error("数据："+str(data))
+            return False
 
     """
     @description: 查询语句
@@ -238,21 +234,21 @@ class r_pgsql_driver():
         try:
             self.cur.execute(sql, args)
             result_list = self.cur.fetchall()
-            info_msg = " 查询成功！" \
-                       + "\r SQL 语句：" + str(sql) \
-                       + "\r 参数：" + str(args) \
-                       + "\r 数据：" \
-                       + str(result_list)[0:100] + "..." \
-                       + " 长度：" + str(len(result_list))
-            rab_pgsql_driver_logger.info(info_msg)
+            r_logger.info("查询成功！")
+            r_logger.info("SQL 文："+str(sql))
+            r_logger.info("参数："+str(args)) if args else False
+            if (len(str(result_list)) > 120):
+                r_logger.info("结果："+str(result_list)[0:100] \
+                    +"......行数："+str(len(result_list)))
+            else:
+                r_logger.info("结果："+str(result_list))
+            return result_list
         except Exception as e:
-            result_list = []
-            err_msg = " 查询失败！" \
-                       + str(e) \
-                       + "\r SQL 语句：" + str(sql) \
-                       + "\r 参数：" + str(args)
-            rab_pgsql_driver_logger.error(err_msg)
-        return result_list
+            r_logger.error("查询失败！")
+            r_logger.error(e)
+            r_logger.error("SQL 文："+str(sql))
+            r_logger.error("参数："+str(args)) if args else False
+            return []
 
 
 """

@@ -2,344 +2,330 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: \rab_python_packages\rab_chrome.py
-# @DATE: 2020/12/16 Wed
-# @TIME: 17:31:00
+# @FILE: /root/GitHub/daily-swap/rab_python_packages/rab_chrome.py
+# @DATE: 2021/07/30 Fri
+# @TIME: 23:00:08
 #
-# @DESCRIPTION: 共通包 Chrome 浏览器构建
+# @DESCRIPTION: 共通包 Chrome 浏览器构建和控制
 
 
-import os
 import re
+import os
+import sys
 import time
-import urllib
+import docker
 import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
-# 切换路径到父级
-import sys
-sys.path.append("..")
+sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_logging
+from rab_python_packages import rab_config
 
 
 # 日志记录
-rab_chrome_logger = rab_logging.build_rab_logger()
+r_logger = rab_logging.r_logger()
 
 
 """
-@description: 在指定端口构建浏览器
--------
-@param: port_num<int>
--------
-@return:
-"""
-def build_chrome(port_num, headless=False):
-    # Linux 下什么都不做
-    if ("Linux" in str(platform.platform()) or headless):
-        return True
-    # Windows 下在对应端口起浏览器
-    else:
-        try:
-            cmd_command = 'start "" chrome.exe --remote-debugging-port=' \
-                        + str(port_num) \
-                        + ' --user-data-dir="C:\selenum\AutomationProfile_"' \
-                        + str(port_num)
-            cmd_driver = os.system(cmd_command)
-            time.sleep(1)
-        except Exception as e:
-            rab_chrome_logger.error("创建浏览器时出错：" + str(e))
-
-"""
-@description: 检查指定端口是否有浏览器进程
--------
-@param: port_num<int>
--------
-@return:
-"""
-def check_chrome(port_num, headless=False):
-    # Linux 下什么都不做
-    if ("Linux" in str(platform.platform()) or headless):
-        return True
-    # Windows 下检验对应端口是否被占用
-    else:
-        try:
-            cmd_command = 'netstat -aon|findstr "' + str(port_num) + '"'
-            cmd_driver = os.popen(cmd_command)
-            cmd_msg = cmd_driver.read()
-            cmd_driver.close()
-            # 如果返回值为空 创建失败
-            if (cmd_msg):
-                return True
-            else:
-                rab_chrome_logger.error("浏览器没有创建！")
-                return False
-        except Exception as e:
-            rab_chrome_logger.error("检查浏览器时出错：" + str(e))
-            cmd_driver.close()
-            return False
-
-"""
-@description: 关闭指定端口的浏览器进程
--------
-@param: port_num<int>
--------
-@return:
-"""
-def close_chrome(port_num, headless=False, driver=None):
-    # Linux 下什么都不做
-    if ("Linux" in str(platform.platform()) or headless):
-        if (driver):
-            # 关闭 Chrome 而非使用 .close() 关闭一个 Tab
-            driver.quit()
-        return True
-    # Windows 下杀指定端口的进程
-    else:
-        try:
-            cmd_command = 'netstat -aon|findstr "' + str(port_num) + '"'
-            cmd_driver = os.popen(cmd_command)
-            cmd_msg = cmd_driver.read().split("\n")[0]
-            cmd_msgs = cmd_msg.split("       ")
-            # 获取端口对应的 PID 用来杀死进程
-            pp_id = re.findall(r"\d+\.?\d*", cmd_msgs[-1])[0]
-            cmd_driver = os.popen('taskkill -f /pid '+str(pp_id))
-            cmd_msg = cmd_driver.read()
-            cmd_driver.close()
-            if ("成功" in cmd_msg):
-                return True
-            else:
-                rab_chrome_logger.error("关闭浏览器失败！")
-                return False
-        except Exception as e:
-            rab_chrome_logger.error("关闭浏览器时出错：" + str(e))
-            cmd_driver.close()
-            return False
-
-"""
-@description: Windows 下在指定端口创建浏览器并在指定秒数后关闭
--------
-@param: port_num<int>, wait_second<int>
--------
-@return:
-"""
-def build_chrome_and_wait(port_num, wait_second):
-    build_chrome(port_num)
-    time.sleep(int(wait_second))
-    close_chrome(port_num)
-
-# """
-# @description: Linux 下为浏览器安装代理插件以使用需要认证的 HTTP 代理
-#               headless 下的 Chrome 并不支持插件安装因此废弃。
-# -------
-# @param:
-# -------
-# @return:
-# """
-# def get_chrome_proxy_extension(proxy):
-#     if ("://" in proxy):
-#         proxy = proxy.split("://")[1]
-#     # 插件存放路径
-#     zips_path = "/root/GitHub/my-proxy-zips"
-#     # 存储模板的路径（GitHub 上直接拷贝下来即可）
-#     proxy_template_path = "/root/GitHub/selenium-chrome-private-proxy"
-#     # 提取代理的各项参数
-#     username = proxy.split("@")[0].split(":")[0]
-#     password = proxy.split("@")[0].split(":")[1]
-#     ip = proxy.split("@")[1].split(":")[0]
-#     port =proxy.split("@")[1].split(":")[1]
-#     # print(username,password,ip,port)
-#     # 创建一个定制Chrome代理扩展(zip文件)
-#     if not os.path.exists(zips_path):
-#         os.mkdir(zips_path)
-#     extension_file_path = os.path.join(zips_path,
-#         "{}.zip".format(username+"_"+password+"_"+ip+"_"+port))
-#     if not os.path.exists(extension_file_path):
-#         # 扩展文件不存在，创建
-#         zf = zipfile.ZipFile(extension_file_path, mode="w")
-#         if not os.path.exists(proxy_template_path):
-#             # 从 GitHub 上拷贝到本地
-#             clone_sh = "git clone https://github.com/senjianlu/" \
-#                         + "selenium-chrome-private-proxy.git" \
-#                         + " " + proxy_template_path
-#             os.system(clone_sh)
-#         zf.write(os.path.join(proxy_template_path, "manifest.json"),
-#                     "manifest.json")
-#         # 替换模板中的代理参数
-#         bg_content = open(os.path.join(proxy_template_path,
-#                                     "background.js")).read()
-#         bg_content = bg_content.replace("%proxy_host", ip)
-#         bg_content = bg_content.replace("%proxy_port", port)
-#         bg_content = bg_content.replace("%username", username)
-#         bg_content = bg_content.replace("%password", password)
-#         zf.writestr('background.js', bg_content)
-#         zf.close()
-#     return extension_file_path
-
-"""
-@description: 接管指定端口的浏览器并返回 driver
+@description: 获取当前操作系统
 -------
 @param:
 -------
 @return:
 """
-def get_driver(port_num, headless=False, proxy=None):
-    capabilities = DesiredCapabilities.CHROME
-    capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
-    chrome_options = Options()
-    # Linux 下，不启动 Chrome 界面
-    if ("Linux" in str(platform.platform()) or headless):
-        chrome_options.add_argument("--headless")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("window-size=1024,768")
-        chrome_options.add_argument("--no-sandbox")
-        # 有需要认证的代理就为浏览器安装定制的代理插件（headless 下不支持插件废弃）
-        if (proxy and "@" in proxy.split("://")[1]):
-            # chrome_proxy_extension = get_chrome_proxy_extension(proxy["http"])
-            # chrome_options.add_extension(chrome_proxy_extension)
-            print("headless 下不支持插件废弃！")
-        # 无需认证的代理则直接加上属性即可
-        elif(proxy):
-            chrome_options.add_argument("--proxy-server="+proxy)
-        # 需要提前建立软连接
-        # ln -f /home/opc/selenium-online/chromedriver /usr/bin/chromedriver
-        chrome_driver = "chromedriver"
-        driver = webdriver.Chrome(chrome_driver,
-                                  desired_capabilities=capabilities,
-                                  options=chrome_options)
-    # Windows 下接管对应端口的浏览器
+def get_system_type():
+    if ("windows" in str(platform.platform()).lower()):
+        return "windows"
     else:
-        if (not check_chrome(port_num)):
-            build_chrome(port_num)
-            time.sleep(2)
-        chrome_options.add_experimental_option("debuggerAddress",
-                                            "127.0.0.1:"+str(port_num))
-        x86_chrome_path = "C:\Program Files (x86)\Google" \
-                        + "\Chrome\Application"
-        x32_chrome_path = "C:\Program Files\Google" \
-                        + "\Chrome\Application"
-        if (os.path.exists(x86_chrome_path)):
-            chrome_driver = x86_chrome_path + "\chromedriver.exe"
-        else:
-            chrome_driver = x32_chrome_path + "\chromedriver.exe"
-        driver = webdriver.Chrome(chrome_driver,
-                                  desired_capabilities=capabilities,
-                                  options=chrome_options)
-    return driver
+        return "linux"
 
 """
-@description: 导入 jQuery
+@description: Windows 系统下在指定端口构建 Chrome 浏览器
 -------
 @param:
 -------
 @return:
 """
-def import_jquery(driver):
-    # 导入 jQuery
-    import_jquery_js = """
-    var importJs = document.createElement("script");
-    importJs.setAttribute("type","text/javascript");
-    importJs.setAttribute("src",
-        "https://libs.baidu.com/jquery/2.0.0/jquery.min.js");
-    document.getElementsByTagName("head")[0].appendChild(importJs);
-    """
-    driver.execute_script(import_jquery_js)
-    # 循环等待直到 jQuery 加载完成，最大等待 20 秒
-    for i in range(0, 20):
-        test_js = "$('head').append('<p>jquery_test</p>');"
-        try:
-            driver.execute_script(test_js)
-            break
-        except Exception:
-            time.sleep(1)
-
-"""
-@description: 在本地起 Chrome 并执行 JS 后关闭
--------
-@param: port_num<int>, web_url<str>, js<str>
--------
-@return: <json>
-"""
-def build_chrome_and_execute_script(port_num,
-                                    web_url,
-                                    js,
-                                    build_wait_time=3,
-                                    get_wait_time=3,
-                                    headless=False,
-                                    proxy=None):
-    # Linux 下启动无界面 Chrome 并导入 jQuery 后执行 JS
-    if ("Linux" in str(platform.platform()) or headless):
-        try:
-            driver = get_driver(port_num, headless, proxy)
-            # 前往地址
-            driver.get(web_url)
-            # 只静默等待指定时间，超时就停止加载页面
-            time.sleep(get_wait_time)
-            driver.execute_script("window.stop();")
-            # 配置较低或是网络不好的服务器 JS 执行时间很长
-            driver.set_script_timeout(180)
-            # 导入 jQuery
-            import_jquery(driver)
-            rab_chrome_logger.info("Liunx 下无头浏览器" \
-                                    + " 网址：" + str(web_url) \
-                                    + "\r执行 JS：" + str(js))
-            result = driver.execute_script(js)
-        except Exception as e:
-            err_msg = "Linux 下无头起 CHROMR 并执行 JS 时出错！" + str(e)
-            rab_chrome_logger.error(err_msg)
-        finally:
-            # 关闭 Chrome 而非使用 .close() 关闭一个 Tab
-            driver.quit()
-    # Windows 下在指定端口建浏览器并执行 JS，然后关闭浏览器
-    else:
-        try:
-            if (not check_chrome(port_num)):
-                build_chrome(port_num)
-                time.sleep(build_wait_time)
-            driver = get_driver(port_num)
-            # 设置页面加载超时时长
-            # driver.set_page_load_timeout(get_wait_time)
-            # driver.set_script_timeout(get_wait_time)
-            # 只确保网址正确以应对接口的跨域禁止问题
-            if (not driver.current_url.split("://")[1].split("/")[0]
-                    == web_url.split("://")[1].split("/")[0]):
-                try:
-                    driver.get(web_url)
-                    time.sleep(get_wait_time)
-                # 超时则停止网页加载
-                except:
-                    driver.execute_script("window.stop()")
-            # 导入 jQuery
-            import_jquery(driver)
-            # 执行 JS
-            if (js):
-                js = urllib.parse.unquote(js)
-            rab_chrome_logger.info("端口：" + str(port_num) \
-                                   + " 网址：" + str(web_url) \
-                                   + "\r执行 JS：" + str(js))
-            result = driver.execute_script(js)
-        except Exception as e:
-            err_msg = "本地起 CHROMR 并执行 JS 时出错！" + str(e)
-            rab_chrome_logger.error(err_msg)
-        finally:
-            close_chrome(port_num)
-    return result
-
-"""
-@description: 确认显示通知弹窗
--------
-@param:
--------
-@return:
-"""
-def confirm_alert(driver):
+def construct_chrome(port):
     try:
-        alert = driver.switch_to.alert
-        alert.accept()
-        return True
-    except Exception:
+        build_command = 'start "" chrome.exe ' \
+            + '--remote-debugging-port= ' + str(port) \
+            + '--user-data-dir="C:\selenum\AutomationProfile"'
+        os.system(cmd_command)
+        time.sleep(3)
+        r_logger.info("Windows 系统下端口 {} 上 Chrome 启动成功！".format(
+            str(port)))
+    except Exception as e:
+        r_logger.error("Windows 系统下端口 {} 上 Chrome 启动失败！".format(
+            str(port)))
+        r_logger.error(e)
+
+"""
+@description: 新建 GOST 容器
+-------
+@param:
+-------
+@return:
+"""
+def create_gost_container(local_proxy_port):
+    # 删除残余的容器并新建
+    container_name = "proxy_port_{}".format(str(local_proxy_port))
+    os.system('docker rm $(docker ps -aq --filter="name={}")'.format(
+        container_name))
+    # 获取镜像名和版本
+    image = rab_config.load_package_config(
+        "rab_config.ini", "rab_proxy", "gost_image")
+    gost_container = docker.from_env().containers.run(
+        image=image,
+        name=container_name,
+        command="/bin/bash",
+        # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
+        ports={"1081/tcp": local_proxy_port},
+        tty=True,
+        detach=True)
+    return gost_container
+
+"""
+@description: 修改 GOST 容器配置
+-------
+@param:
+-------
+@return:
+"""
+def configure_gost(gost_container, proxy):
+    # GOST 关闭命令
+    gost_stop_command = rab_config.load_package_config(
+        "rab_linux_command.ini", "rab_proxy", "gost_stop")
+    # 拼接代理至 GOST 启动命令
+    gost_start_command = rab_config.load_package_config(
+        "rab_linux_command.ini", "rab_proxy", "gost_start").replace(
+            "{"+"proxy"+"}", proxy)
+    # 重启 GOST
+    gost_container.exec_run(gost_stop_command)
+    gost_container.exec_run(gost_start_command)
+
+
+"""
+@description: r_chrome 类
+-------
+@param:
+-------
+@return:
+"""
+class r_chrome():
+
+    """
+    @description: 初始化
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def __init__(self,
+                 driver=None,
+                 port=None,
+                 proxy=None,
+                 local_proxy_port=1080):
+        # chromedriver
+        self.driver = driver
+        # 浏览器起的端口
+        self.port = port
+        # 使用的代理
+        self.proxy = proxy
+        # 需要验证代理转发时所用的本地端口
+        self.local_proxy_port = 1080
+        # 需要验证代理转发用 GOST
+        self.gost_container = None
+        # 操作系统
+        self.system = get_system_type()
+    
+    """
+    @description: 构建浏览器
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def build(self):
+        # 浏览器配置
+        capabilities = DesiredCapabilities.CHROME
+        capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
+        chrome_options = Options()
+        # Windows 系统
+        if (self.system == "windows"):
+            r_logger.info("Windows 系统下 Chrome 构建开始......")
+            # 如果指定了端口
+            if (self.port):
+                # 在指定端口构建浏览器
+                construct_chrome(self.port)
+                # 接管端口上的浏览器
+                chrome_options.add_experimental_option(
+                    "debuggerAddress", "127.0.0.1:"+str(self.port))
+            # 如果没有指定端口
+            else:
+                pass
+            # 提前将 chromedriver 路径加入环境变量中
+            chrome_driver = "chromedriver.exe"
+        # Linux 系统
+        elif(self.system == "linux"):
+            r_logger.info("Linux 系统下 Chrome 构建开始......")
+            # Linux 无头无界面浏览器配置
+            chrome_options.add_argument("--headless")
+            chrome_options.add_argument("--disable-gpu")
+            chrome_options.add_argument("window-size=1024,768")
+            chrome_options.add_argument("--no-sandbox")
+            # 无需认证的代理则直接加上属性即可
+            if(self.proxy):
+                # 如果需要验证的话
+                if ("@" in self.proxy):
+                    # 如果当前没有 GOST 容器的话新起一个
+                    if (not self.gost_container):
+                        self.gost_container = create_gost_container(
+                            self.local_proxy_port)
+                    # 更改 GOST 的代理转发信息
+                    configure_gost(self.gost_container, self.proxy)
+                    # 本地代理信息
+                    proxy = "socks5://127.0.0.1:{}".format(
+                        str(self.local_proxy_port))
+                # 如果不需要验证的话
+                else:
+                    pass
+                # 浏览器代理的配置
+                chrome_options.add_argument(
+                    "--proxy-server={}".format(proxy))
+                r_logger.info(
+                    "Linux 系统下 Chrome 使用代理：{}".format(proxy))
+            # 提前建立了软连接的 chromedriver
+            chrome_driver = "chromedriver"
+        # Windows 和 Linux 分开配置完成后，建立浏览器
+        try:
+            self.driver = webdriver.Chrome(chrome_driver, \
+                desired_capabilities=capabilities, options=chrome_options)
+            r_logger.info("{} 系统下 Chrome 构建成功！".format(
+                self.system.capitalize()))
+            return True
+        except Exception as e:
+            r_logger.error("{} 系统下 Chrome 构建失败！".format(
+                self.system.capitalize()))
+            r_logger.error(e)
+            return False
+
+    """
+    @description: 为无界面浏览器导入 jQuery
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def import_jquery(self):
+        # 选择百度的源
+        import_jquery_js = """
+        var importJs = document.createElement("script");
+        importJs.setAttribute("type","text/javascript");
+        importJs.setAttribute("script",
+            "https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js");
+        document.getElementsByTagName("head")[0].appendChild(importJs);
+        """
+        self.driver.execute_script(import_jquery_js)
+        # 循环 10 秒等待导入成功
+        for _ in range(0, 10):
+            test_jquery_js = "$('head').append('<p>jquery_test</p>');"
+            try:
+                self.driver.execute_script(test_jquery_js)
+                r_logger.info("无头浏览器 jQuery 加载完成！")
+                return True
+            except Exception as e:
+                r_logger.info("无头浏览器等待 jQuery 加载中......")
+                time.sleep(1)
+        r_logger.error("无头浏览器 jQuery 加载失败！")
+        return False
+    
+    """
+    @description: 关闭浏览器
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def close(self):
+        # 关闭 GOST 容器
+        if (self.gost_container):
+            self.gost_container.stop()
+            self.gost_container = None
+        # Windows 系统
+        if (self.system == "windows"):
+            r_logger.info("Windows 系统下开始关闭 Chrome......")
+            # 如果指定了端口
+            if (self.port):
+                # 查找对应端口的进程
+                cmd_command = 'netstat -aon|findstr "{}"'.format(str(self.port))
+                cmd_driver = os.popen(cmd_command)
+                try:
+                    cmd_msg = cmd_driver.read().split("\n")[0]
+                    cmd_msgs = cmd_msg.split("       ")
+                    # 获取端口对应的 PID 用来杀死进程
+                    pid = re.findall(r"\d+\.?\d*", cmd_msgs[-1])[0]
+                    cmd_driver = os.popen(
+                        "taskkill -f /pid {}".format(str(pid)))
+                    # 返回信息
+                    cmd_msg = cmd_driver.read()
+                    if ("成功" in cmd_msg):
+                        r_logger.info("Windows 系统下关闭浏览器成功！")
+                        return True
+                    else:
+                        r_logger.error(
+                            "Windows 系统下关闭浏览器失败！错误：{}".format(
+                                str(cmd_msg)))
+                except Exception as e:
+                    r_logger.error("Windows 系统下关闭浏览器失败！")
+                    r_logger.error(e)
+                finally:
+                    cmd_driver.close()
+                return False
+            # 如果没有指定端口
+            else:
+                self.driver.quit()
+                r_logger.info("Windows 系统下关闭浏览器成功！")
+                return True
+        # Linux 系统
+        else:
+            r_logger.info("Linux 系统下开始关闭 Chrome......")
+            if (self.driver):
+                self.driver.quit()
+            r_logger.info("Linux 系统下关闭浏览器成功！")
+            return True
+        
+    """
+    @description: 等待元素出现
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def wait_appear(self, xpath, max_wait_time=10):
+        for _ in range(0, timeout):
+            try:
+                element = slef.driver.find_element_by_xpath(xpath)
+                return True
+            except Exception as e:
+                time.sleep(1)
         return False
 
+    """
+    @description: 重启浏览器
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def restart(self):
+        # 关闭现有浏览器
+        if (self.driver):
+            self.close()
+        # 新建浏览器
+        self.build()
+        
 
 """
 @description: 单体测试
@@ -349,9 +335,10 @@ def confirm_alert(driver):
 @return:
 """
 if __name__ == "__main__":
-    # print(get_chrome_proxy_extension("http://123:345@8.8.8.8:88"))
-    build_chrome(9222)
-    time.sleep(2)
-    check_chrome(9222)
-    time.sleep(2)
-    close_chrome(9222)
+    r_chrome = r_chrome()
+    r_chrome.build()
+    r_chrome.restart()
+    # r_chrome.driver.get("https://baidu.com")
+    # time.sleep(3)
+    # print(r_chrome.driver.page_source)
+    # r_chrome.close()

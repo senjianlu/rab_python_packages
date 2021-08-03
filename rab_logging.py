@@ -12,6 +12,12 @@
 import os
 import logging
 from datetime import datetime
+from singleton_decorator import singleton
+# 切换路径到父级
+import sys
+sys.path.append("..") if (".." not in sys.path) else True
+from rab_python_packages import rab_env
+from rab_python_packages import rab_config
 
 
 """
@@ -21,32 +27,224 @@ from datetime import datetime
 -------
 @return:
 """
-def build_rab_logger():
+def build_logger():
+    # 默认打印和记录日志等级为：info
     logging.basicConfig(filemode="a",
                         format="%(asctime)s %(name)s:%(levelname)s:%(message)s",
-                        datefmt="%Y-%m-%d %H:%M:%S",
+                        datefmt="%Y/%m/%d %H:%M:%S",
                         level=logging.INFO)
     logger = logging.getLogger("RAB_LOGGER")
-    # 判断路径是否存在，不在的话就在上层路径查找
-    if (os.path.exists("log")):
-        fh = logging.FileHandler(
-            "log/{:%Y-%m-%d}.log".format(datetime.now()))
-    elif (os.path.exists("../log")):
-        fh = logging.FileHandler(
-            "../log/{:%Y-%m-%d}.log".format(datetime.now()))
-    # 如果上一层也没有路径，则直接在本包中创建临时日志文件夹
+    # 在 rab_python_packages 同级目录下创建 rab_logs 日志存放用文件夹
+    path = rab_env.find_rab_python_packages_path()
+    # 判断是否存在现有的 rab_logs 日志存放用文件夹
+    if (path):
+        rab_logs_path = path + "rab_logs"
     else:
-        if (not os.path.exists("rab_log")):
-            os.makedirs("rab_log")
-        fh = logging.FileHandler(
-            "rab_log/{:%Y-%m-%d}.log".format(datetime.now()))
-    formatter = logging.Formatter("%(asctime)s | %(levelname)-8s | " \
-                                  + "%(filename)s | %(funcName)s | " \
-                                  + "行:%(lineno)04d | %(message)s")
+        rab_logs_path = "rab_logs"
+    if (not os.path.exists(rab_logs_path)):
+        os.makedirs(rab_logs_path)
+    # 以天为单位存储日志
+    fh = logging.FileHandler(
+        (rab_logs_path+"/{:%Y%m%d}.log").format(datetime.now()))
+    # 日志存储格式
+    formatter = logging.Formatter("%(asctime)s | %(levelname)-8s | %(message)s")
     fh.setFormatter(formatter)
     logger.addHandler(fh)
     return logger
 
+"""
+@description: 获取 logging 的等级对象
+-------
+@param:
+-------
+@return:
+"""
+def get_logging_level(level):
+    if (level.lower() == "debug"):
+        return logging.DEBUG
+    elif(level.lower() == "info"):
+        return logging.INFO
+    elif(level.lower() == "warn"):
+        return logging.WARN
+    elif(level.lower() == "error"):
+        return logging.ERROR
+    elif(level.lower() == "critical"):
+        return logging.CRITICAL
+
+"""
+@description: log 等级比较
+-------
+@param:
+-------
+@return:
+"""
+def get_weight(level):
+    if (level):
+        level_weight = {
+            "debug": 1,
+            "info": 2,
+            "warn": 3,
+            "error": 4,
+            "critical": 5
+        }
+        return level_weight[level]
+    else:
+        return 0
+
+
+"""
+@description: 用以定位实际调用日志记录方法位置的装饰器
+-------
+@param:
+-------
+@return:
+"""
+def findcaller(func):
+    def wrapper(*args):
+        # 获取调用该函数的文件名、函数名及行号
+        filename =  sys._getframe(1).f_code.co_filename
+        funcname =  sys._getframe(1).f_code.co_name 
+        lineno = sys._getframe(1).f_lineno
+        # 将原本的入参转变为列表，再把调用者的信息添加到入参列表中
+        args = list(args)
+        args.append(
+            f" {os.path.basename(filename)} | {funcname} | 行：{lineno} | ")
+        func(*args)
+    return wrapper
+
+
+"""
+@description: r_logger 类
+-------
+@param:
+-------
+@return:
+"""
+# 单例模式
+@singleton
+class r_logger():
+
+    """
+    @description: 初始化
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def __init__(self,
+                 level="info",
+                 logger=build_logger(),
+                 telegarm_notice_level=rab_config.load_package_config(
+                     "rab_config.ini", "rab_logging", "level").lower(),
+                 qq_notice_level=None):
+        # logger 对象
+        self.logger = logger
+        # 修改 logger 对象的日志记录等级
+        self.logger.setLevel(get_logging_level(level))
+        # Telegram 机器人通知等级（大于等于这个等级的都进行通知，None 为不通知）
+        self.telegarm_notice_level = telegarm_notice_level
+        # QQ 机器人通知等级
+        self.qq_notice_level = qq_notice_level
+    
+    """
+    @description: 机器人通知
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def send_log(self, log_level, log):
+        # 加上日志等级
+        log = "| {log_level} | {log}".format(
+            log_level=log_level.upper().ljust(8, " "), log=log)
+        # Telegram 机器人通知
+        if (get_weight(log_level) >= get_weight(self.telegarm_notice_level)):
+            pass
+        # QQ 机器人通知
+        if (get_weight(log_level) >= get_weight(self.qq_notice_level)):
+            pass
+
+    """
+    @description: debug 日志等级方法重写
+    -------
+    @param:
+    -------
+    @return:
+    """
+    @findcaller
+    def debug(self, log, caller=None):
+        log = caller + log
+        self.send_log("debug", log)
+        self.logger.debug(log)
+    
+    """
+    @description: info 日志等级方法重写
+    -------
+    @param:
+    -------
+    @return:
+    """
+    @findcaller
+    def info(self, log, caller=None):
+        log = caller + log
+        self.send_log("info", log)
+        self.logger.info(log)
+    
+    """
+    @description: warn 日志等级方法重写
+    -------
+    @param:
+    -------
+    @return:
+    """
+    @findcaller
+    def warn(self, log, caller=None):
+        log = caller + log
+        self.send_log("warn", log)
+        self.logger.warning(log)
+    
+    """
+    @description: error 日志等级方法重写
+    -------
+    @param:
+    -------
+    @return:
+    """
+    @findcaller
+    def error(self, log, caller=None):
+        # 单纯的消息直接记录
+        if (type(log) == str):
+            pass
+        # 如果是错误类
+        else:
+            error = log
+            # 获取错误行号
+            error_no = str(error.__traceback__.tb_lineno)
+            # 获取出错的文件
+            error_file = str(error.__traceback__.tb_frame.f_globals["__file__"])
+            # 错误信息
+            error_msg = str(error).strip()
+            # 具体日志
+            log = "出错！文件 {error_file} 第 {error_no} 行，报错：{error_msg}" \
+                .format(error_file=error_file, error_no=error_no, \
+                    error_msg=error_msg)
+        log = caller + log
+        self.send_log("error", log)
+        self.logger.error(log)
+    
+    """
+    @description: critical 日志等级方法重写
+    -------
+    @param:
+    -------
+    @return:
+    """
+    @findcaller
+    def critical(self, log, caller=None):
+        log = caller + log
+        self.send_log("critical", log)
+        self.logger.critical(log)
+    
 
 """
 @description: 单体测试
@@ -56,12 +254,15 @@ def build_rab_logger():
 @return:
 """
 if __name__ == "__main__":
-    rab_logger = build_rab_logger()
-    rab_logger.debug("debug")
-    rab_logger.info("info")
-    rab_logger.warning("warning")
-    rab_logger.error("error")
-    rab_logger.critical("critical")
-
-
-
+    r_logger = r_logger("warn")
+    r_logger.debug("debug")
+    r_logger.info("info")
+    r_logger.warn("warn")
+    r_logger.error("error")
+    try:
+        a = 123
+        b = 456
+        import aaa
+    except Exception as e:
+        r_logger.error(e)
+    r_logger.critical("critical")

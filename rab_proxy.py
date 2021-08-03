@@ -9,14 +9,20 @@
 # @DESCRIPTION: 共通包 代理获取模块
 
 
+import os
+import sys
 import requests
 import random
-# 切换路径到父级
-import sys
-sys.path.append("..")
+import docker
+sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_postgresql
 from rab_python_packages import rab_config
 from rab_python_packages import rab_requests
+from rab_python_packages import rab_logging
+
+
+# 日志记录
+r_logger = rab_logging.r_logger()
 
 
 """
@@ -220,21 +226,43 @@ class r_proxy():
     -------
     @return:
     """
-    def get(self, web, proxy_method="socks5"):
-        web = web.lower()
-        # 获取这个对这个网站所筛选出的出口 IP 访问次数
+    def get(self, web, accessable_webs=[], proxy_method="socks5"):
+        # 测试所有需要验证的网站是否都有访问可行性数据
+        all_webs = [web]
+        for accessable_web in accessable_webs:
+            all_webs.append(accessable_web)
+        for web in all_webs:
+            web = web.lower()
+            if (web in self.ip_usage_counts.keys()):
+                pass
+            # 如果没有访问可行性数据，则报错
+            else:
+                r_logger.warn(
+                    "暂时没有针对网站：{} 的代理访问可行性测试！".format(web))
+                return None
+        # 取出能访问主网站的 IP
         filtered_ip_usage_counts = {}
-        # 如果已经有了既存的访问可行性数据
-        if (web in self.ip_usage_counts.keys()):
-            for out_ip in self.ip_usage_counts[web]:
-                # 如果这个 IP 能支持指定的代理方式
-                if (out_ip in self.proxy_infos[proxy_method].keys()):
-                    filtered_ip_usage_counts[out_ip] \
-                        = self.ip_usage_counts[web][out_ip]
-        # 如果没有访问可行性数据，则报错
-        else:
-            print("暂时没有针对网站：" + web + " 的代理访问可行性测试！")
-            return None
+        for out_ip in self.ip_usage_counts[web]:
+            # 如果这个 IP 能支持指定的代理方式
+            if (out_ip in self.proxy_infos[proxy_method].keys()):
+                filtered_ip_usage_counts[out_ip] \
+                    = self.ip_usage_counts[web][out_ip]
+        # 如果有其他需要验证可用性的网站则进行二次筛选
+        filtered_2x_ip_usage_counts = {}
+        if (accessable_webs):
+            for out_ip in filtered_ip_usage_counts:
+                access_flg = True
+                for accessable_web in accessable_webs:
+                    if (out_ip in self.ip_usage_counts[accessable_web]):
+                        pass
+                    else:
+                        # 跳过这个 IP
+                        access_flg = False
+                # 这个 IP 对所有需要访问的网站都可行时加入二次筛选结果
+                if (access_flg):
+                    filtered_2x_ip_usage_counts[out_ip] \
+                        = filtered_ip_usage_counts[out_ip]
+            filtered_ip_usage_counts = filtered_2x_ip_usage_counts
         # 获取使用次数最少的那个代理
         least_used_ip = min(
             filtered_ip_usage_counts, key=filtered_ip_usage_counts.get)
@@ -279,8 +307,9 @@ class r_proxy():
                               test_url,
                               num_2_test=None,
                               proxy_method="socks5"):
-        print("代理对站点的临时访问测试开始！站点名：{web} 地址：{test_url}".format(
-            web=web, test_url=test_url))
+        r_logger.info(
+            "代理对站点的临时访问测试开始！站点名：{web} 地址：{test_url}".format(
+                web=web, test_url=test_url))
         # 新建这个网站的代理使用次数统计
         self.ip_usage_counts[web] = {}
         # 如果没有指定测试代理数，默认从代理池中取出一半的代理进行测试，最多选出 10 个
@@ -289,7 +318,7 @@ class r_proxy():
             num_2_test = len(list(self.proxy_infos[proxy_method].keys())) // 2
         elif(not num_2_test):
             num_2_test = 10
-        print("总测试代理数：" + str(num_2_test))
+        r_logger.info("总测试代理数：{}".format(str(num_2_test)))
         # 遍历这些代理
         for out_ip in random.sample(list(
                 self.proxy_infos[proxy_method].keys()), num_2_test):
@@ -300,9 +329,9 @@ class r_proxy():
         # 最后如果测试完这个网站无可访问节点，则直接删除次数统计
         if (not self.ip_usage_counts[web]):
             del self.ip_usage_counts[web]
-            print("测试完成，无可访问 {web} 的代理。".format(web=web))
+            r_logger.info("测试完成，无可访问 {web} 的代理。".format(web=web))
         else:
-            print("测试完成！访问 {web} 可使用代理的个数：{num}".format(
+            r_logger.info("测试完成！访问 {web} 可使用代理的个数：{num}".format(
                 web=web, num=str(len(self.ip_usage_counts[web].keys()))))
 
 

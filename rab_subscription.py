@@ -11,17 +11,21 @@
 
 
 import os
+import sys
 import time
 import json
 import base64
 import docker
 import requests
 from urllib.parse import urlparse
-# 切换路径到父级
-import sys
-sys.path.append("..")
+sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 from rab_python_packages import rab_requests
+from rab_python_packages import rab_logging
+
+
+# 日志记录
+r_logger = rab_logging.r_logger()
 
 
 """
@@ -34,14 +38,14 @@ from rab_python_packages import rab_requests
 def get_subscription_origin_infos(subscription_urls):
     subscription_origin_infos = {}
     for subscription_url in subscription_urls:
-        # 不使用代理、使用上次的 SSR 节点、使用备用节点来访问订阅地址
         try:
-            # 不使用代理访问订阅链接
-            response = rab_requests.r_get(subscription_url, timeout=30)
-            subscription_origin_infos[subscription_url] = response.text
+            # 保险访问
+            e_response = rab_requests.ensure_get(subscription_url)
+            subscription_origin_infos[subscription_url] = e_response.text
         except Exception as e:
-            print(subscription_url + " 不使用代理获取订阅原始信息出错！" \
-                + "\r\n出错信息：" + str(e))
+            r_logger.error("{} 不使用代理获取订阅原始信息出错！".format(
+                subscription_url))
+            r_logger.error(e)
     return subscription_origin_infos
             
 """
@@ -71,7 +75,7 @@ def b64decode_4_subscription(str_4_b64decode):
             except Exception:
                 str_4_b64decode = str_4_b64decode + "="
     # 解码失败
-    print(str_4_b64decode, "BASE64 解码失败！")
+    r_logger.error("BASE64 解码失败！待解码内容：{}".format(str_4_b64decode))
     return None
 
 """
@@ -101,8 +105,8 @@ def get_node_infos(subscription_info):
                     node_info_4_base64decode).decode("UTF-8")
                 node_infos["ssr"].append(node_info)
             except Exception:
-                print("SSR 原始信息 BASE64 解码失败：" \
-                        + node_info_4_base64decode)
+                r_logger.error("SSR 原始信息 BASE64 解码失败：{}".format(
+                    node_info_4_base64decode))
         # VMess 节点
         elif("vmess://" in node_info_4_base64decode):
             node_info_4_base64decode = node_info_4_base64decode \
@@ -112,8 +116,8 @@ def get_node_infos(subscription_info):
                     node_info_4_base64decode).decode("UTF-8")
                 node_infos["vmess"].append(node_info)
             except Exception:
-                print("VMESS 原始信息 BASE64 解码失败：" \
-                        + node_info_4_base64decode)
+                r_logger.error("VMESS 原始信息 BASE64 解码失败：{}".format(
+                    node_info_4_base64decode))
         # SS 节点
         elif("ss://" in node_info_4_base64decode):
             # SS 节点信息部分加密，因此只需部分解密即可
@@ -127,15 +131,16 @@ def get_node_infos(subscription_info):
                 method_and_password = b64decode_4_subscription(
                     method_and_password_4_base64decode).decode("UTF-8")
             except Exception:
-                print("SS 原始信息 BASE64 解码失败：" \
-                        + node_info_4_base64decode)
+                r_logger.error("SS 原始信息 BASE64 解码失败：".format(
+                    node_info_4_base64decode))
             # 拼接
             node_info = method_and_password + "@" \
                 + node_info_4_base64decode.split("@")[1]
             node_infos["ss"].append(node_info)
         # 未知协议
         elif(node_info_4_base64decode):
-            print("未知协议的节点信息：" + node_info_4_base64decode)
+            r_logger.error("未知协议的节点信息：{}".format(
+                node_info_4_base64decode))
     return node_infos
 
 """
@@ -258,7 +263,7 @@ def parse_node_info(node_protocol, node_info):
         }
         return ss_info
     else:
-        print("未知协议：" + node_protocol)
+        r_logger.error("未知协议：{}".format(node_protocol))
 
 """
 @description: 根据节点协议和信息生成 Docker 内执行的配置更改命令
@@ -351,7 +356,7 @@ def get_proxy_info(proxies):
         proxy_info = json.loads(r.text)
         return proxy_info
     except Exception as e:
-        print("获取代理信息出错！" + str(e))
+        r_logger.error("获取代理信息出错！" + str(e))
     return None
 
 """
@@ -416,10 +421,12 @@ class r_subscription:
     @return:
     """
     def __init__(self,
-                 subscription_urls,
+                 subscription_urls=rab_config.load_package_config(
+                    "rab_config.ini", "rab_subscription", "subscription_urls"),
                  proxy_port=1080,
                  proxy_location=None,
-                 access_test_urls=[],
+                 access_test_urls=rab_config.load_package_config(
+                    "rab_config.ini", "rab_subscription", "access_test_urls"),
                  access_test_timeout=5,
                  non_repetitive_node_num=999):
         # 订阅地址
@@ -513,7 +520,7 @@ class r_subscription:
                 # 启动 GOST
                 self.ss_container.exec_run(gost_start_command, detach=True)
         else:
-            print("未知协议，无法启动容器。")
+            r_logger.error("未知协议，无法启动容器。")
     
     """
     @description: 修改容器配置
@@ -586,7 +593,7 @@ class r_subscription:
                 self.create(node_protocol)
                 return True
         # 如果没有节点可用
-        print("从订阅获取到的节点列表为空，请检查！")
+        r_logger.warn("从订阅获取到的节点列表为空，请检查！")
         return False
     
     """
@@ -628,14 +635,15 @@ class r_subscription:
                         # 测试地区是否通过
                         if (not self.is_location_ok()):
                             continue
-                        print("测试节点地区正确！")
+                        r_logger.info("测试节点地区正确！")
                         # 测试网站访问是否通过
                         if (not self.is_access_ok()):
                             self.banned_nodes.append(node_id)
                             continue
-                        print("测试节点网站访问通过！")
-                        print("节点切换完成！")
-                        print("至今已使用过的节点：" + str(self.used_nodes))
+                        r_logger.info("测试节点网站访问通过！")
+                        r_logger.info("节点切换完成！")
+                        r_logger.debug("至今已使用过的节点：{}".format(
+                            str(self.used_nodes)))
                         return True
                     # 如果已经被使用过
                     else:
@@ -668,11 +676,11 @@ class r_subscription:
     def is_node_used(self, node_id):
         # 已经使用过
         if (node_id in self.used_nodes):
-            print(node_id, "节点已经使用过了。")
+            r_logger.info("{} 节点已经使用过了。".format(node_id))
             return True
         # 尚未使用过
         else:
-            print(node_id, "节点尚未被使用过！")
+            r_logger.info("{} 节点尚未被使用过！".format(node_id))
             self.used_nodes.append(node_id)
             return False
     
@@ -688,20 +696,23 @@ class r_subscription:
         self.proxy_info = get_proxy_info(self.proxies)
         # 节点畅通
         if (self.proxy_info):
-            print("当前节点出口 IP：" + self.proxy_info["query"])
-            print("已经使用过的 IP：" + str(self.used_proxy_ips))
+            r_logger.info("当前节点出口 IP：{}".format(
+                str(self.proxy_info["query"])))
+            r_logger.info("已经使用过的 IP：{}".format(
+                str(self.used_proxy_ips)))
             # 如果这个 IP 已经使用过
             if (self.proxy_info["query"] in self.used_proxy_ips):
-                print("节点未使用过但是出口 IP 已经被使用过，废弃......")
+                r_logger.info(
+                    "节点未使用过但是出口 IP 已经被使用过，废弃......")
                 return True
             # 如果这个 IP 尚未使用过
             else:
-                print("节点畅通且 IP 未使用过！")
+                r_logger.info("节点畅通且 IP 未使用过！")
                 self.used_proxy_ips.append(self.proxy_info["query"])
                 return False
         # 出错情况下也返回已经使用过以跳过
         else:
-            print("节点不畅通，废弃......")
+            r_logger.info("节点不畅通，废弃......")
             return True
 
     """
@@ -738,7 +749,8 @@ class r_subscription:
                 else:
                     return False
             except Exception as e:
-                print("获取节点访问网站权限出错！" + str(e))
+                r_logger.info("获取节点访问网站权限出错！错误信息：{}".format(
+                    str(e)))
                 return False
         return True
 
@@ -751,14 +763,7 @@ class r_subscription:
 @return:
 """
 if __name__ == "__main__":
-    # 获取订阅地址
-    subscription_urls = rab_config.load_package_config(
-        "rab_config.ini", "rab_subscription", "subscription_urls")
-    # print(get_all_node_infos(subscription_urls))
-    access_test_urls = rab_config.load_package_config(
-        "rab_config.ini", "rab_subscription", "access_test_urls")
-    r_subscription = r_subscription(
-        subscription_urls, access_test_urls=access_test_urls)
+    r_subscription = r_subscription()
     if (r_subscription.start()):
         try:
             no = 1
@@ -771,7 +776,7 @@ if __name__ == "__main__":
             # 测试 Docker
             for _ in range(0, 10):
                 r_subscription.change("ssr")
-                print("以证实可使用 IP：",
+                print("已证实可使用 IP：",
                     len(r_subscription.used_proxy_ips), " 个！")
                 no += 1
         except Exception as e:

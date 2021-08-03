@@ -10,10 +10,9 @@
 
 
 import os
-import minio
-# 切换路径到父级
 import sys
-sys.path.append("..")
+import minio
+sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 
 

@@ -9,11 +9,10 @@
 # @DESCRIPTION: 自用进阶方法
 
 
+import sys
 import base64
 import requests
-# 切换路径到父级
-import sys
-sys.path.append("..")
+sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 
 
@@ -35,18 +34,16 @@ class r_a_post_office():
     @return:
     """
     def __init__(self,
-                 username=None,
-                 password=None,
-                 host=None,
-                 port=None,
-                 domain=None):
-        # 初始化判断
-        if (not (username and password and host and port)):
-            configuration_items = [
-                "rapo_username", "rapo_password", "rapo_host", "rapo_port", \
-                    "rapo_domain"]
-            username, password, host, port, domain = rab_config \
-                .load_package_config("rab_advance", configuration_items)
+                 username=rab_config.load_package_config(
+                     "rab_config.ini", "rab_advance", "rapo_username"),
+                 password=rab_config.load_package_config(
+                     "rab_config.ini", "rab_advance", "rapo_password"),
+                 host=rab_config.load_package_config(
+                     "rab_config.ini", "rab_advance", "rapo_host"),
+                 port=rab_config.load_package_config(
+                     "rab_config.ini", "rab_advance", "rapo_port"),
+                 domain=rab_config.load_package_config(
+                     "rab_config.ini", "rab_advance", "rapo_domain")):
         # 初始化
         self._username = username
         self._password = password
@@ -139,6 +136,7 @@ class r_a_post_office():
         else:
             print(response.status_code, response.text)
             return False
+
 
 """
 @description: 单体测试

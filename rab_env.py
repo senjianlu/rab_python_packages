@@ -10,10 +10,13 @@
 
 
 import os
+import sys
+sys.path.append("..") if (".." not in sys.path) else True
+from rab_python_packages import rab_config
 
 
 """
-@description: 查找文件
+@description: 查找包内文件
 -------
 @param:
 -------
@@ -35,6 +38,26 @@ def find_rab_file(rab_file_name):
         else:
             if (os.path.exists(rab_file_name)):
                 return rab_file_name
+
+"""
+@description: 查找包路径
+-------
+@param:
+-------
+@return:
+"""
+def find_rab_python_packages_path():
+    paths = [
+        None,
+        "../"
+    ]
+    for path in paths:
+        if (path):
+            if (os.path.exists(path + "rab_python_packages")):
+                return path
+        else:
+            if (os.path.exists("rab_python_packages")):
+                return path
 
 """
 @description: 环境安装 Yum
@@ -71,6 +94,14 @@ def fix_env_by_pip():
 -------
 @return:
 """
-def fix():
-    fix_env_by_yum()
-    fix_env_by_pip()
+def fix(moudule_name=None):
+    # 没有包名的情况下默认安装所有
+    if (not moudule_name):
+        fix_env_by_yum()
+        fix_env_by_pip()
+    # rab_chrome 模块
+    elif(moudule_name=="rab_chrome"):
+        # 下载安装 Chrome 和对应版本的 chromedriver 并建立软连接
+        fix_rab_chrome_command = rab_config.load_package_config(
+            "rab_linux_command.ini", "rab_env", "fix_rab_chrome")
+        os.system(fix_rab_chrome_command)
