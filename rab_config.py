@@ -11,6 +11,7 @@
 
 import os
 import sys
+import json
 import configparser
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_env
@@ -26,7 +27,7 @@ from rab_python_packages import rab_env
 def get_config(file_name):
     file_path = rab_env.find_rab_file(file_name)
     config = configparser.RawConfigParser()
-    config.read(file_path, encoding="utf-8")
+    config.read(file_path, encoding="UTF-8")
     return config
 
 """
@@ -46,6 +47,9 @@ def parse_if_need(configuration_item):
         for list_item in list_items:
             list_item = list_item.lstrip().lstrip('"').rstrip('"')
             parsed_configuration_item.append(list_item)
+    # 如果是 JSON 形式
+    elif("{" in configuration_item and "}" in configuration_item):
+        parsed_configuration_item = json.loads(configuration_item)
     return parsed_configuration_item
 
 """
@@ -73,6 +77,6 @@ def load_package_config(file_name, configuration_class, configuration_item):
 """
 if __name__ == "__main__":
     subscription_urls = load_package_config(
-        "rab_config.ini", "rab_subscription", "subscription_urls")
+        "rab_config.ini", "rab_subscription", "access_test_urls")
     print(subscription_urls)
     pass
