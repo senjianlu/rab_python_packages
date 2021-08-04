@@ -13,11 +13,6 @@ import os
 import sys
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
-from rab_python_packages import rab_logging
-
-
-# 日志记录
-r_logger = rab_logging.r_logger()
 
 
 """
@@ -45,8 +40,6 @@ def find_rab_file(rab_file_name):
         else:
             if (os.path.exists(rab_file_name)):
                 return rab_file_name
-    r_logger.critical(
-        "无法找到 rab_python_packages 包用配置文件：{}".format(rab_file_name))
 
 """
 @description: 查找包路径
@@ -67,7 +60,6 @@ def find_rab_python_packages_path():
         else:
             if (os.path.exists("rab_python_packages")):
                 return path
-    r_logger.critical("无法定位 rab_python_packages 包所在路径！")
 
 """
 @description: 环境安装 Yum
