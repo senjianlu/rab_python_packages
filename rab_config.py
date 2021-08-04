@@ -48,7 +48,8 @@ def parse_if_need(configuration_item):
             list_item = list_item.lstrip().lstrip('"').rstrip('"')
             parsed_configuration_item.append(list_item)
     # 如果是 JSON 形式
-    elif("{" in configuration_item and "}" in configuration_item):
+    elif(configuration_item.strip().startswith("{")
+            and configuration_item.strip().endswith("}")):
         parsed_configuration_item = json.loads(configuration_item)
     return parsed_configuration_item
 
