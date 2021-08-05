@@ -131,6 +131,8 @@ def get_proxy_infos(location=None, level=None):
             select_sql = select_sql + select_filter_2_append
         # 搜索
         result = r_pgsql_driver.select(select_sql)
+        # 乱序搜索结果
+        random.shuffle(result)
         # 将搜索出的数据转为代理字典
         for row in result:
             for proxy_method in proxy_infos.keys():
