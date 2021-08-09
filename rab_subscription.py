@@ -463,7 +463,7 @@ def get_subscription_urls(origin="config", r_pgsql_driver=None):
         if (close_flg):
             r_pgsql_driver.close()
         for row in select_result:
-            subscription_urls.append(row["spb_url"])
+            subscription_urls.append(row["sps_url"])
     return subscription_urls
 
 
