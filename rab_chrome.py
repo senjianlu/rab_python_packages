@@ -21,6 +21,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_logging
 from rab_python_packages import rab_config
+from rab_python_packages import rab_docker
 
 
 # 日志记录
@@ -71,8 +72,13 @@ def construct_chrome(port):
 def create_gost_container(local_proxy_port):
     # 删除残余的容器并新建
     container_name = "proxy_port_{}".format(str(local_proxy_port))
-    os.system('docker rm $(docker ps -aq --filter="name={}")'.format(
-        container_name))
+    # 关闭和删除旧容器
+    old_containers = rab_docker.get_containers(
+        name_keyword=container_name)
+    if (old_containers):
+        for old_container in old_containers:
+            old_container.stop()
+            old_container.remove()
     # 获取镜像名和版本
     image = rab_config.load_package_config(
         "rab_config.ini", "rab_proxy", "gost_image")
@@ -96,11 +102,11 @@ def create_gost_container(local_proxy_port):
 def configure_gost(gost_container, proxy):
     # GOST 关闭命令
     gost_stop_command = rab_config.load_package_config(
-        "rab_linux_command.ini", "rab_proxy", "gost_stop")
+        "rab_linux_command.ini", "rab_chrome", "gost_stop")
     # 拼接代理至 GOST 启动命令
     gost_start_command = rab_config.load_package_config(
-        "rab_linux_command.ini", "rab_proxy", "gost_start").replace(
-            "{"+"proxy"+"}", proxy)
+        "rab_linux_command.ini", "rab_chrome", "gost_start").replace(
+            "{proxy}", proxy)
     # 重启 GOST
     gost_container.exec_run(gost_stop_command)
     gost_container.exec_run(gost_start_command)

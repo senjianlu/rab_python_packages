@@ -6,22 +6,22 @@
 # @DATE: 2021/05/10 Mon
 # @TIME: 14:11:24
 #
-# @DESCRIPTION: 共通包 Linux 系统下解析机场订阅，并通过 Docker 部署客户端
-#               与 rab_proxy 模块不同的是，这里将“域名_端口”作为主键进行区分而非 IP
+# @DESCRIPTION: 共通包 Linux 系统下解析订阅和节点
 
 
-import os
+import re
 import sys
 import time
 import json
+import urllib
 import base64
-import docker
 import requests
-from urllib.parse import urlparse
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 from rab_python_packages import rab_requests
 from rab_python_packages import rab_logging
+from rab_python_packages import rab_docker
+from rab_python_packages import rab_postgresql
 
 
 # 日志记录
@@ -29,33 +29,15 @@ r_logger = rab_logging.r_logger()
 
 
 """
-@description: 获取订阅的原始信息
+@description: 用以订阅信息 BASE64 解码的方法
 -------
 @param:
 -------
 @return:
 """
-def get_subscription_origin_infos(subscription_urls):
-    subscription_origin_infos = {}
-    for subscription_url in subscription_urls:
-        try:
-            # 保险访问
-            e_response = rab_requests.ensure_get(subscription_url)
-            subscription_origin_infos[subscription_url] = e_response.text
-        except Exception as e:
-            r_logger.error("{} 不使用代理获取订阅原始信息出错！".format(
-                subscription_url))
-            r_logger.error(e)
-    return subscription_origin_infos
-            
-"""
-@description: 用以订阅信息 BASE64 解码的封装
--------
-@param:
--------
-@return:
-"""
-def b64decode_4_subscription(str_4_b64decode):
+def b64decode(str_4_b64decode):
+    str_4_b64decode = str_4_b64decode.replace("_", "/")
+    str_4_b64decode = str_4_b64decode.replace("-", "+")
     # 带 - 需要用专用的 URL BASE64 解码
     if ("-" in str_4_b64decode):
         # 最多加 4 次 "=" 以使原始信息符合 BASE64 格式
@@ -79,306 +61,348 @@ def b64decode_4_subscription(str_4_b64decode):
     return None
 
 """
-@description: 从解码后的订阅原始信息中拆分出每个节点的信息
+@description: 获取指定参数的值
 -------
 @param:
 -------
 @return:
 """
-def get_node_infos(subscription_info):
-    node_infos = {
-        "ssr": [],
-        "vmess": [],
-        "ss": []
-    }
-    # UTF-8 编码
-    subscription_info = subscription_info.decode("UTF-8")
-    # 根据换行符分行
-    node_infos_4_base64decode = subscription_info.split("\n")
-    for node_info_4_base64decode in node_infos_4_base64decode:
-        # SSR 节点
-        if ("ssr://" in node_info_4_base64decode):
-            node_info_4_base64decode = node_info_4_base64decode \
-                .replace("ssr://", "").replace("_", "/").replace("-", "+")
-            try:
-                node_info = b64decode_4_subscription(
-                    node_info_4_base64decode).decode("UTF-8")
-                node_infos["ssr"].append(node_info)
-            except Exception:
-                r_logger.error("SSR 原始信息 BASE64 解码失败：{}".format(
-                    node_info_4_base64decode))
-        # VMess 节点
-        elif("vmess://" in node_info_4_base64decode):
-            node_info_4_base64decode = node_info_4_base64decode \
-                .replace("vmess://", "").replace("_", "/").replace("-", "+")
-            try:
-                node_info = b64decode_4_subscription(
-                    node_info_4_base64decode).decode("UTF-8")
-                node_infos["vmess"].append(node_info)
-            except Exception:
-                r_logger.error("VMESS 原始信息 BASE64 解码失败：{}".format(
-                    node_info_4_base64decode))
-        # SS 节点
-        elif("ss://" in node_info_4_base64decode):
-            # SS 节点信息部分加密，因此只需部分解密即可
-            # 去掉协议头
-            node_info_4_base64decode = node_info_4_base64decode.lstrip("ss://")
-            # 分离出加密的协议和密码
-            method_and_password_4_base64decode = node_info_4_base64decode \
-                .split("@")[0]
-            # 解密协议和密码
-            try:
-                method_and_password = b64decode_4_subscription(
-                    method_and_password_4_base64decode).decode("UTF-8")
-            except Exception:
-                r_logger.error("SS 原始信息 BASE64 解码失败：".format(
-                    node_info_4_base64decode))
-            # 拼接
-            node_info = method_and_password + "@" \
-                + node_info_4_base64decode.split("@")[1]
-            node_infos["ss"].append(node_info)
-        # 未知协议
-        elif(node_info_4_base64decode):
-            r_logger.error("未知协议的节点信息：{}".format(
-                node_info_4_base64decode))
-    return node_infos
-
-"""
-@description: 将节点信息整理为 JSON 格式
--------
-@param:
--------
-@return:
-"""
-def parse_node_info(node_protocol, node_info):
-    # SSR 节点信息解析
-    if (node_protocol.lower() == "ssr"):
-        # === SSR 基础信息 ===
-        # 服务器 IP
-        ssr_ip = node_info.split("/?")[0].split(":")[0]
-        # 服务器端口
-        ssr_port = node_info.split("/?")[0].split(":")[1]
-        # 密码
-        ssr_password = b64decode_4_subscription(
-            node_info.split("/?")[0].split(":")[5]).decode("UTF-8")
-        # 加密（chacha20 加密 https://www.icode9.com/content-4-224432.html）
-        ssr_method = node_info.split("/?")[0].split(":")[3]
-        # 协议
-        ssr_protocol = node_info.split("/?")[0].split(":")[2]
-        # 混淆
-        ssr_obfs = node_info.split("/?")[0].split(":")[4]
-        # === SSR 进阶参数 ===
-        # 混淆参数
-        ssr_obfs_param = b64decode_4_subscription(
-            node_info.split("/?")[1].split("&")[0].split("=")[1]) \
-                .decode("UTF-8")
-        # 协议参数
-        ssr_protocol_param = b64decode_4_subscription(node_info.split("/?")[1] \
-                                .split("&")[1].split("=")[1]).decode("UTF-8")
-        # === SSR 其他信息 ===
-        # 备注
-        try:
-            ssr_remarks = b64decode_4_subscription(node_info.split("/?")[1]
-                            .split("&")[2].split("=")[1]).decode("UTF-8")
-        except Exception:
-            ssr_remarks = ""
-        # 分组
-        try:
-            ssr_group = b64decode_4_subscription(
-                node_info.split("/?")[1].split("&")[3] .split("=")[1]) \
-                    .decode("UTF-8")
-        except Exception:
-            ssr_group = ""
-        # udpport
-        try:
-            ssr_udpport = node_info.split("/?")[1].split("&")[4].split("=")[1]
-        except Exception:
-            ssr_udpport = ""
-        # uot
-        try:
-            ssr_uot = node_info.split("/?")[1].split("&")[5].split("=")[1]
-        except Exception:
-            ssr_uot = ""
-        # 拼接
-        ssr_info = {
-            "local_address": "127.0.0.1",
-            "local_port": "1080",
-            "server": ssr_ip,
-            "server_port": ssr_port,
-            "password": ssr_password,
-            "method": ssr_method,
-            "protocol": ssr_protocol,
-            "protocol_param": ssr_protocol_param,
-            "obfs": ssr_obfs,
-            "obfs_param": ssr_obfs_param,
-            "remarks": ssr_remarks,
-            "group": ssr_group,
-            "udpport": ssr_udpport,
-            "uot": ssr_uot
-        }
-        return ssr_info
-    # VMess 节点解析
-    elif(node_protocol.lower() == "vmess"):
-        vemss_info = json.loads(node_info)
-        vemss_info = {
-            "socks_port": "1080",
-            "server": json.loads(node_info)["add"],
-            "port": json.loads(node_info)["port"],
-            "uuid": json.loads(node_info)["id"],
-            "alterId": json.loads(node_info)["aid"]
-        }
-        # 进阶配置
-        # net
-        if ("net" in json.loads(node_info).keys()):
-            vemss_info["network"] = json.loads(node_info)["net"]
-        else:
-            vemss_info["network"] = " "
-        # ws-path
-        if ("path" in json.loads(node_info).keys()):
-            vemss_info["ws_path"] = json.loads(node_info)["path"]
-        else:
-            vemss_info["ws_path"] = " "
-        # tls
-        if ("tls" in json.loads(node_info).keys()):
-            vemss_info["tls"] = json.loads(node_info)["tls"]
-        else:
-            vemss_info["tls"] = " "
-        return vemss_info
-    # SS 协议
-    elif(node_protocol.lower() == "ss"):
-        # 服务器地址
-        ss_server = node_info.split("@")[1].split(":")[0]
-        # 服务器端口
-        ss_server_port = node_info.split("@")[1].split(":")[1].split("#")[0]
-        # 服务器端口
-        ss_method = node_info.split("@")[0].split(":")[0]
-        # 密码
-        ss_password = node_info.split("@")[0].split(":")[1]
-        ss_info = {
-            "local_port": "1080",
-            "server": ss_server,
-            "server_port": ss_server_port,
-            "method": ss_method,
-            "password": ss_password
-        }
-        return ss_info
+def get_param_value(param_key, url):
+    search_obj = re.search(".*{}=(.*)#.*".format(param_key), url)
+    if ("&" in search_obj.group(1)):
+        return search_obj.group(1).split("&")[0]
     else:
-        r_logger.error("未知协议：{}".format(node_protocol))
+        return search_obj.group(1)
 
 """
-@description: 根据节点协议和信息生成 Docker 内执行的配置更改命令
+@description: 解析 SSR 节点信息
 -------
 @param:
 -------
 @return:
 """
-def generate_configure_command(node_protocol, node_info):
-    # 获取模板指令
-    command = rab_config.load_package_config("rab_linux_command.ini",
-        "rab_subscription", node_protocol+"_configure")
-    for node_info_key in node_info.keys():
-        command = command.replace("{"+node_info_key+"_4_python}",
-            str(node_info[node_info_key]))
-    return command
-
-"""
-@description: 根据节点信息生成主键 ID
--------
-@param:
--------
-@return:
-"""
-def get_node_id(node_protocol, node_info):
-    # 将节点信息转为 JSON 格式并修改键值
-    parsed_node_info = parse_node_info(node_protocol, node_info)
-    if (node_protocol.lower() == "ssr"):
-        node_id = "ssr_{server}_{port}_{obfs}_{param}".format(
-            server=parsed_node_info["server"],
-            port=parsed_node_info["server_port"],
-            obfs=parsed_node_info["obfs"],
-            param=parsed_node_info["obfs_param"])
-    elif(node_protocol.lower() == "vmess"):
-        node_id = "vmess_{server}_{port}_{ws_path}".format(
-            server=parsed_node_info["server"], port=parsed_node_info["port"],
-            ws_path=parsed_node_info["ws_path"])
-    elif(node_protocol.lower() == "ss"):
-        node_id = "ss_{server}_{port}".format(server=parsed_node_info["server"],
-            port=parsed_node_info["server_port"])
-    return node_id
-
-"""
-@description: 获取所有节点信息
--------
-@param:
--------
-@return:
-"""
-def get_all_node_infos(subscription_urls):
-    all_node_infos = {"ssr": [], "vmess":[], "ss": []}
-    # 访问所有订阅地址以获取原始信息
-    subscription_origin_infos = get_subscription_origin_infos(
-        subscription_urls)
-    # 遍历所有原始信息
-    for subscription_url in subscription_origin_infos.keys():
-        # 解密原始信息
-        subscription_info = b64decode_4_subscription(
-            subscription_origin_infos[subscription_url])
-        # 如果原始信息解密成功
-        if (subscription_info):
-            # 分割原始信息
-            node_infos = get_node_infos(subscription_info)
-            # 分协议储存
-            for node_protocol in node_infos.keys():
-                for node_info in node_infos[node_protocol]:
-                    # 转换为直接可用的订阅信息
-                    parsed_node_info = parse_node_info(
-                        node_protocol, node_info)
-                    # 节点 ID
-                    parsed_node_info["node_id"] = get_node_id(
-                        node_protocol, node_info)
-                    # 订阅地址
-                    parsed_node_info["subscription_url"] = subscription_url
-                    all_node_infos[node_protocol].append(parsed_node_info)
-    return all_node_infos
-
-"""
-@description: 获取这个代理的 IP、地区等信息
--------
-@param:
--------
-@return:
-"""
-def get_proxy_info(proxies):
+def parse_ssr_node_url(node_url):
+    node_info = node_url.replace("ssr://", "")
     try:
-        r = requests.get("http://ip-api.com/json/?lang=zh-CN",
-                         proxies=proxies,
-                         timeout=5)
-        proxy_info = json.loads(r.text)
-        return proxy_info
-    except Exception as e:
-        r_logger.error("获取代理信息出错！" + str(e))
-    return None
+        node_info = b64decode(node_info).decode("UTF-8")
+    except Exception:
+        r_logger.error("SSR 原始信息 BASE64 解码失败：{}".format(node_info))
+        return None
+    node = {}
+    node["name"] = b64decode(
+        node_info.split("/?")[1].split("&")[2].split("=")[1]).decode("UTF-8")
+    node["type"] = "ssr"
+    # === SSR 基础信息 ===
+    # 服务器 IP
+    node["server"] = node_info.split("/?")[0].split(":")[0]
+    # 服务器端口
+    node["port"] = node_info.split("/?")[0].split(":")[1]
+    # 加密
+    node["cipher"] = node_info.split("/?")[0].split(":")[3]
+        # 密码
+    node["password"] = b64decode(
+        node_info.split("/?")[0].split(":")[5]).decode("UTF-8")
+    # 协议
+    node["protocol"] = node_info.split("/?")[0].split(":")[2]
+    # 协议参数
+    node["protocol-param"] = b64decode(
+        node_info.split("/?")[1].split("&")[1].split("=")[1]).decode("UTF-8")
+    # 混淆
+    node["obfs"] = node_info.split("/?")[0].split(":")[4]
+    node["obfs-param"] = b64decode(
+        node_info.split("/?")[1].split("&")[0].split("=")[1]).decode("UTF-8")
+    # 备注
+    node["remarks"] = b64decode(
+        node_info.split("/?")[1].split("&")[2].split("=")[1]).decode("UTF-8")
+    # 分组
+    node["group"] = b64decode(
+        node_info.split("/?")[1].split("&")[3].split("=")[1]).decode("UTF-8")
+    # UDP
+    node["udp"] = "false"
+    # 节点 ID
+    node["id"] = "{type}_{server}_{port}_{obfs}_{obfs-param}".format(
+        **node)
+    return node
 
 """
-@description: 创建容器
+@description: 解析 SS 节点信息
 -------
 @param:
 -------
 @return:
 """
-def create_container(docker_client, image, proxy_port):
-    container_name = "proxy_port_" + str(proxy_port)
-    os.system('docker rm $(docker ps -aq --filter="name=' \
-        + container_name + '")')
-    container = docker_client.containers.run(
-                    image=image,
-                    name=container_name,
-                    command="/bin/bash",
-                    # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
-                    ports={"1081/tcp": proxy_port},
-                    tty=True,
-                    detach=True)
-    return container
+def parse_ss_node_url(node_url):
+    node_info = node_url.replace("ss://", "")
+    # 部分解密
+    node_info_4_b64decode = node_info.split("@")[0]
+    try:
+        node_info_4_b64decode = b64decode(node_info_4_b64decode).decode("UTF-8")
+    except Exception:
+        print("SS 原始信息 BASE64 解码失败：{}".format(node_info_4_b64decode))
+        return None
+    node = {}
+    node["name"] = urllib.parse.unquote(node_info.split("@")[1].split("#")[1])
+    node["type"] = "ss"
+    node["server"] = node_info.split("@")[1].split("#")[0].split(":")[0]
+    node["port"] = node_info.split("@")[1].split("#")[0].split(":")[1]
+    node["cipher"] = node_info_4_b64decode.split(":")[0]
+    node["password"] = node_info_4_b64decode.split(":")[1]
+    node["udp"] = "false"
+    if ("plugin=" in node_info):
+        node["plugin"] = get_param_value("plugin", node_info)
+    else:
+        node["plugin"] = ""
+    if (node["plugin"]):
+        node["plugin-opts"] = {}
+        if ("obfs=" in node_info):
+            node["mode"] = get_param_value("obfs", node_info)
+        if ("obfs-host=" in node_info):
+            node["host"] = get_param_value("obfs-host", node_info)
+    # 节点 ID
+    node["id"] = "{type}_{server}_{port}".format(**node)
+    return node
+
+"""
+@description: 解析 VMess 节点信息
+-------
+@param:
+-------
+@return:
+"""
+def parse_vmess_node_url(node_url):
+    node_info = node_url.replace("vmess://", "")
+    try:
+        node_info = b64decode(node_info).decode("UTF-8")
+        node_info = json.loads(node_info)
+    except Exception:
+        print("Vmess 原始信息 BASE64 解码失败：{}".format(node))
+        return None
+    node = {}
+    node["name"] = u"{}".format(node_info["ps"])
+    node["type"] = "vmess"
+    node["server"] = node_info["add"] if "add" in node_info.keys() else ""
+    node["port"] = node_info["port"]
+    node["uuid"] = node_info["id"]
+    node["alterId"] = node_info["aid"]
+    node["cipher"] = "auto"
+    node["udp"] = "false"
+    node["tls"] = node_info["tls"] if "tls" in node_info.keys() else ""
+    if (node["tls"]):
+        node["tls"] = "true"
+    node["servername"] = node_info["sni"] if "sni" in node_info.keys() else ""
+    node["network"] = node_info["net"] if "net" in node_info.keys() else ""
+    if (node["network"] == "tcp"):
+        node["network"] = ""
+    elif(node["network"] == "ws"):
+        node["ws-path"] = node_info["path"] if "path" in node_info.keys() else ""
+        node["ws-headers"] = {}
+        if ("host" in node_info.keys()):
+            node["ws-headers"]["Host"] = node_info["host"]
+    # 节点 ID
+    if (not node["network"]):
+        node["id"] = "{type}_{server}_{port}".format(**node)
+    elif(node["network"] == "ws"):
+        node["id"] = "{type}_{server}_{port}_{ws-path}".format(**node)
+    return node
+
+"""
+@description: 解析 Trojan 节点信息
+-------
+@param:
+-------
+@return:
+"""
+def parse_trojan_node_url(node_url):
+    node_info = node_url.replace("trojan://", "")
+    node = {}
+    node["name"] = urllib.parse.unquote(node_info.split("#")[1])
+    node["type"] = "trojan"
+    node["server"] = node_info.split("@")[1].split("?")[0].split(":")[0]
+    node["port"] = node_info.split("@")[1].split("?")[0].split(":")[1]
+    node["password"] = node_info.split("@")[0]
+    node["udp"] = "false"
+    if ("allowInsecure=" in node_info):
+        node["allowInsecure"] = get_param_value("allowInsecure", node_info)
+        if (node["allowInsecure"] and node["allowInsecure"] == "1"):
+            node["skip-cert-verify"] = "true"
+        del node["allowInsecure"]
+    if ("peer=" in node_info):
+        node["peer"] = get_param_value("peer", node_info)
+    else:
+        node["peer"] = ""
+    if ("sni=" in node_info):
+        node["sni"] = get_param_value("sni", node_info)
+    else:
+        node["sni"] = ""
+    node["remark"] = urllib.parse.unquote(node_info.split("#")[1])
+    # 节点 ID
+    if (not node["sni"]):
+        node["id"] = "{type}_{server}_{port}".format(**node)
+    else:
+        node["id"] = "{type}_{server}_{port}_{sni}".format(**node)
+    return node
+
+"""
+@description: 获取订阅的 BASE64 解码前的原始信息
+-------
+@param:
+-------
+@return:
+"""
+def get_subscription_origin_infos(subscription_urls):
+    subscription_origin_infos = {}
+    for subscription_url in subscription_urls:
+        try:
+            # 保险访问
+            e_response = rab_requests.ensure_get(subscription_url)
+            subscription_origin_infos[subscription_url] = e_response.text
+        except Exception as e:
+            r_logger.error("{} 不使用代理获取订阅原始信息出错！".format(
+                subscription_url))
+            r_logger.error(e)
+    return subscription_origin_infos
+
+"""
+@description: 获取订阅的 BASE64 解码后并分割后的各节点链接
+-------
+@param:
+-------
+@return:
+"""
+def get_node_urls(subscription_origin_info):
+    node_urls = []
+    subscription_info = b64decode(subscription_origin_info).decode("UTF-8")
+    for row in subscription_info.split("\n"):
+        if (row.strip()):
+            node_urls.append(row.strip())
+    return node_urls
+
+"""
+@description: 解析节点链接以获取节点信息
+-------
+@param:
+-------
+@return:
+"""
+def parse_node_url(node_url):
+    if (node_url.startswith("ssr://")):
+        node = parse_ssr_node_url(node_url)
+    elif(node_url.startswith("ss://")):
+        node = parse_ss_node_url(node_url)
+    elif(node_url.startswith("vmess://")):
+        node = parse_vmess_node_url(node_url)
+    elif(node_url.startswith("trojan://")):
+        node = parse_trojan_node_url(node_url)
+    return node
+
+"""
+@description: 筛选掉通知用节点
+-------
+@param:
+-------
+@return:
+"""
+def filter_nodes(nodes):
+    filter_keywords = rab_config.load_package_config(
+        "rab_config.ini", "rab_subscription", "filter_keywords")
+    filtered_nodes = []
+    for node in nodes:
+        filter_flg = False
+        for filter_keyword in filter_keywords:
+            if (filter_keyword.lower() in node["name"].lower()):
+                filter_flg = True
+                break
+        if (not filter_flg):
+            filtered_nodes.append(node)
+    return filtered_nodes
+
+"""
+@description: 获取所有节点
+-------
+@param:
+-------
+@return:
+"""
+def get_nodes(subscription_urls):
+    nodes = []
+    subscription_origin_infos = get_subscription_origin_infos(subscription_urls)
+    for subscription_url in subscription_origin_infos.keys():
+        node_urls = get_node_urls(subscription_origin_infos[subscription_url])
+        for node_url in node_urls:
+            node = parse_node_url(node_url)
+            node["subscription_url"] = subscription_url
+            nodes.append(node)
+    # 筛选节点
+    nodes = filter_nodes(nodes)
+    return nodes
+
+"""
+@description: 生成 Clash 节点
+-------
+@param:
+-------
+@return:
+"""
+def generate_clash_proxy(node):
+    # 可能回包含中文导致转码失败的无用字段
+    useless_config_keys = rab_config.load_package_config(
+        "rab_config.ini", "rab_subscription", "useless_config_keys")
+    # 遍历配置
+    clash_proxy = '- {{name: {},'.format(node["type"])
+    for node_config_key in node.keys():
+        # 跳过无用字段
+        if (node_config_key in useless_config_keys):
+            continue
+        # 如果节点配置值不是字典类型
+        if (type(node[node_config_key]) != dict
+                and node[node_config_key]):
+            clash_proxy += ' {key}: {value},'.format(
+                key=node_config_key, value=node[node_config_key])
+        # 如果节点配置是字典类型的
+        if (type(node[node_config_key]) == dict
+                and node[node_config_key]):
+            node_config_dict_str = "{"
+            for node_config_dict_key in node[node_config_key]:
+                if (node[node_config_key][node_config_dict_key]):
+                    node_config_dict_str += '"{key}": {value},'.format(
+                        key=node_config_dict_key, value=node[
+                            node_config_key][node_config_dict_key])
+            # 如果为空，跳过这个配置字段
+            if (node_config_dict_str == "{"):
+                continue
+            else:
+                node_config_dict_str = node_config_dict_str[::-1].replace(
+                    ",", "", 1)[::-1]
+                node_config_dict_str += "}"
+                clash_proxy += " {key}: {value},".format(
+                    key=node_config_key, value=node_config_dict_str)
+    # 循环结束后修改格式
+    clash_proxy = clash_proxy[::-1].replace(",", "", 1)[::-1]
+    clash_proxy += "}"
+    return clash_proxy
+
+"""
+@description: 生成修改配置文件的 Linux 命令
+-------
+@param:
+-------
+@return:
+"""
+def generate_configure_command(node, local_address="127.0.0.1", local_port=1080):
+    clash_proxy = generate_clash_proxy(node)
+    # 获取这个协议的配置命令模板
+    command_template = rab_config.load_package_config(
+        "rab_linux_command.ini", "rab_subscription", "{}_configure".format(
+            node["type"]))
+    # 批量替换信息
+    configure_command = command_template
+    # 基础的本地代理配置
+    configure_command = configure_command.replace(
+        "{socks-port_4_python}", "{}".format(str(local_port)))
+    # 节点配置
+    configure_command = configure_command.replace(
+        "{clash-proxy_4_python}", clash_proxy)
+    return configure_command
 
 """
 @description: 修改容易内代理配置
@@ -387,31 +411,70 @@ def create_container(docker_client, image, proxy_port):
 -------
 @return:
 """
-def configure_node(container, node_protocol, node_info):
+def configure_node(container, node):
+    print("====== 开始修改容器内的配置文件并重启...... ======")
     # 生成修改配置文件的命令
-    configure_cmd = generate_configure_command(node_protocol, node_info)
+    configure_command = generate_configure_command(node)
     # 关闭代理软件
-    print(container.exec_run(rab_config.load_package_config(
-        "rab_linux_command.ini", "rab_subscription", node_protocol+"_stop")))
+    print(container.exec_run(
+        rab_config.load_package_config("rab_linux_command.ini", \
+            "rab_subscription", "{}_stop".format(node["type"]))))
     # 初始化配置文件
-    init_command = rab_config.load_package_config(
-        "rab_linux_command.ini", "rab_subscription", node_protocol+"_init")
-    container.exec_run(init_command)
+    print(container.exec_run(
+        rab_config.load_package_config("rab_linux_command.ini", \
+            "rab_subscription", "{}_init".format(node["type"]))))
     # 修改配置文件
-    print(container.exec_run(configure_cmd))
+    print(container.exec_run(configure_command))
     # 启动代理软件
-    print(container.exec_run(rab_config.load_package_config(
-        "rab_linux_command.ini", "rab_subscription", node_protocol+"_start")))
-
+    print(container.exec_run(
+        rab_config.load_package_config("rab_linux_command.ini", \
+            "rab_subscription", "{}_start".format(node["type"]))))
+    print("====== 容器内的配置文件修改并重启完成！ ======")
 
 """
-@description: r_subscription 类
+@description: 获取订阅地址
 -------
 @param:
 -------
 @return:
 """
-class r_subscription:
+def get_subscription_urls(origin="config", r_pgsql_driver=None):
+    subscription_urls = []
+    # 从配置文件中读取
+    if (origin == "config"):
+        subscription_urls = rab_config.load_package_config(
+            "rab_config.ini", "rab_subscription", "subscription_urls")
+    # 从数据库中读取
+    else:
+        # 如果是临时创建连接则需要及时关闭数据库连接
+        close_flg = False
+        if (not r_pgsql_driver):
+            r_pgsql_driver = rab_postgresql.r_pgsql_driver(
+                show_column_name=True)
+            close_flg = True
+        # 在数据库中搜索
+        select_sql = """
+            SELECT
+                *
+            FROM
+                sa_proxy_subscription
+        """
+        select_result = r_pgsql_driver.select(select_sql)
+        if (close_flg):
+            r_pgsql_driver.close()
+        for row in select_result:
+            subscription_urls.append(row["spb_url"])
+    return subscription_urls
+
+
+"""
+@description: 在本地开启代理用的类
+-------
+@param:
+-------
+@return:
+"""
+class r_subscription():
 
     """
     @description: 初始化
@@ -421,35 +484,31 @@ class r_subscription:
     @return:
     """
     def __init__(self,
-                 subscription_urls=rab_config.load_package_config(
-                    "rab_config.ini", "rab_subscription", "subscription_urls"),
-                 proxy_port=1080,
+                 subscription_urls=[],
+                 local_port=1080,
                  proxy_location=None,
                  access_test_urls=rab_config.load_package_config(
                     "rab_config.ini", "rab_subscription", "access_test_urls"),
-                 access_test_timeout=5,
+                 access_test_timeout=int(rab_config.load_package_config(
+                    "rab_config.ini", "rab_requests", "timeout")),
                  non_repetitive_node_num=999):
         # 订阅地址
         self.subscription_urls = subscription_urls
         # 节点信息
-        self.all_node_infos = {
-            "ssr": [],
-            "vmess": [],
-            "ss": []
-        }
+        self.all_nodes = {}
         # 可直接使用的代理
         self.proxies = {
-            "http": "socks5://127.0.0.1:" + str(proxy_port),
-            "https": "socks5://127.0.0.1:" + str(proxy_port)
+            "http": "socks5://127.0.0.1:" + str(local_port),
+            "https": "socks5://127.0.0.1:" + str(local_port)
         }
         # 本地代理端口
-        self.proxy_port = proxy_port
+        self.local_port = local_port
         # 当前代理信息
         self.proxy_info = None
         # 所需代理所在地区
         self.proxy_location = proxy_location
         # 使用过的代理 IP
-        self.used_proxy_ips = []
+        self.used_proxy_out_ips = []
         # 需要测试访问的网址
         self.access_test_urls = access_test_urls
         # 对测试网站的超时容忍时间
@@ -457,18 +516,12 @@ class r_subscription:
         # 使用多少个节点之后重置
         self.non_repetitive_node_num = non_repetitive_node_num
         # 使用过的节点 ID
-        self.used_nodes = []
+        self.used_node_ids = []
         # 无法访问对应网站的节点 ID
-        self.banned_nodes = []
-        # Docker Clinet
-        self.docker_client = docker.from_env()
-        # SSR 节点用容器
-        self.ssr_container = None
-        # VMess 节点用容器
-        self.vmess_container = None
-        # SS 节点用容器
-        self.ss_container = None
-    
+        self.banned_node_ids = []
+        # 节点用容器
+        self.container = None
+
     """
     @description: 新建容器
     -------
@@ -476,51 +529,40 @@ class r_subscription:
     -------
     @return:
     """
-    def create(self, node_protocol):
+    def create(self):
         # 获取镜像名和版本
         image = rab_config.load_package_config(
-            "rab_config.ini", "rab_subscription", node_protocol+"_image")
+            "rab_config.ini", "rab_subscription", "image")
         # GOST 启动命令
         gost_start_command = rab_config.load_package_config(
             "rab_linux_command.ini", "rab_subscription", "gost_start")
-        # SSR 协议
-        if (node_protocol.lower() == "ssr"):
-            # 如果已经有在运行的容器
-            if (self.ssr_container):
-                # 修改配置
-                pass
-            # 没有的情况下新建容器
-            else:
-                self.ssr_container = create_container(
-                    self.docker_client, image, self.proxy_port)
-                # 启动 GOST
-                self.ssr_container.exec_run(gost_start_command, detach=True)
-        # VMess 协议
-        elif(node_protocol.lower() == "vmess"):
-            # 如果已经有在运行的容器
-            if (self.vmess_container):
-                # 修改配置
-                pass
-            # 没有的情况下新建容器
-            else:
-                self.vmess_container = create_container(
-                    self.docker_client, image, self.proxy_port)
-                # 启动 GOST
-                self.vmess_container.exec_run(gost_start_command, detach=True)
-        # SS 协议
-        elif(node_protocol.lower() == "ss"):
-            # 如果已经有在运行的容器
-            if (self.ss_container):
-                # 修改配置
-                pass
-            # 没有的情况下新建容器
-            else:
-                self.ss_container = create_container(
-                    self.docker_client, image, self.proxy_port)
-                # 启动 GOST
-                self.ss_container.exec_run(gost_start_command, detach=True)
+        # 如果已经有在运行的容器
+        if (self.container):
+            # 修改配置
+            pass
+        # 没有的情况下新建容器
         else:
-            r_logger.error("未知协议，无法启动容器。")
+            # 容器名
+            container_name = "proxy_port_{}".format(str(self.local_port))
+            # 关闭和删除旧容器
+            old_containers = rab_docker.get_containers(
+                name_keyword=container_name)
+            if (old_containers):
+                for old_container in old_containers:
+                    old_container.stop()
+                    old_container.remove()
+            # 建立新容器
+            self.container = rab_docker.get_client().containers.run(
+                image=image,
+                name=container_name,
+                command="/bin/bash",
+                # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
+                ports={"1081/tcp": str(self.local_port)},
+                tty=True,
+                detach=True)
+            # 启动 GOST
+            self.container.exec_run(gost_start_command, detach=True)
+        return self.container
     
     """
     @description: 修改容器配置
@@ -529,37 +571,12 @@ class r_subscription:
     -------
     @return:
     """
-    def configure(self, node_protocol, node_info):
-        if (node_protocol.lower() == "ssr"):
-            configure_node(self.ssr_container, node_protocol, node_info)
-        elif(node_protocol.lower() == "vmess"):
-            configure_node(self.vmess_container, node_protocol, node_info)
-        elif(node_protocol.lower() == "ss"):
-            configure_node(self.ss_container, node_protocol, node_info)
+    def configure(self, node):
+        # 修改容器内的配置
+        configure_node(self.container, node)
         # 等待 3 秒等待生效
         time.sleep(3)
     
-    """
-    @description: 关闭容器
-    -------
-    @param:
-    -------
-    @return:
-    """
-    def close_container(self, node_protocol):
-        if (node_protocol.lower() == "ssr"):
-            if (self.ssr_container):
-                self.ssr_container.stop()
-                self.ssr_container = None
-        elif(node_protocol.lower() == "vmess"):
-            if (self.vmess_container):
-                self.vmess_container.stop()
-                self.vmess_container = None
-        elif(node_protocol.lower() == "ss"):
-            if (self.ss_container):
-                self.ss_container.stop()
-                self.ss_container = None
-
     """
     @description: 根据订阅连接解析出所有节点信息
     -------
@@ -567,10 +584,9 @@ class r_subscription:
     -------
     @return:
     """
-    def get_all(self):
-        self.all_node_infos = get_all_node_infos(
-            self.subscription_urls)
-
+    def get_all_nodes(self):
+        self.all_nodes = get_nodes(self.subscription_urls)
+    
     """
     @description: 启动容器并配置好代理，因为是本地启动不需要账户密码
     -------
@@ -578,23 +594,14 @@ class r_subscription:
     -------
     @return:
     """
-    def start(self):
+    def start(self, origin="config", r_pgsql_driver=None):
+        # 获取所有订阅链接
+        self.subscription_urls = get_subscription_urls(origin, r_pgsql_driver)
         # 解析订阅
-        self.get_all()
-        # 优先尝试 SSR 节点
-        for node_protocol in self.all_node_infos.keys():
-            if (self.all_node_infos[node_protocol]):
-                # 关闭占用端口的进程
-                kill_command = (rab_config.load_package_config(
-                    "rab_linux_command.ini", "common", "kill_process_by_port")
-                        .replace("{"+"port"+"}", str(self.proxy_port)))
-                os.system(kill_command)
-                # 启动容器
-                self.create(node_protocol)
-                return True
-        # 如果没有节点可用
-        r_logger.warn("从订阅获取到的节点列表为空，请检查！")
-        return False
+        self.get_all_nodes()
+        # 启动容器
+        self.create()
+        return True
     
     """
     @description: 修改容器内配置以更换节点
@@ -603,57 +610,45 @@ class r_subscription:
     -------
     @return:
     """
-    def change(self, node_protocol=None):
-        # 是否指定协议
-        if (node_protocol):
-            node_protocols = [node_protocol]
-        else:
-            node_protocols = self.all_node_infos.keys()
-        # 循环所有协议
-        for node_protocol in node_protocols:
-            # 循环所有节点
-            for node_info in self.all_node_infos[node_protocol]:
-                # 节点 ID
-                node_id = node_info["node_id"]
-                # 判断使用过的节点等信息是否需要清理
-                if (len(self.used_nodes) >= self.non_repetitive_node_num):
-                    self.clear()
-                # 判断节点和 IP 都没有被使用过，并且也不在封禁列表中
-                if (not self.is_node_used(node_id)
-                        and not node_id in self.banned_nodes):
-                    # 关闭非此协议以外的容器
-                    other_node_protocols = list(self.all_node_infos.keys())
-                    other_node_protocols.remove(node_protocol)
-                    for other_node_protocol in other_node_protocols:
-                        self.close_container(other_node_protocol)
-                    # 开启本协议容器
-                    self.create(node_protocol)
-                    # 修改容器内配置
-                    self.configure(node_protocol, node_info)
-                    # 判断更新后节点的出口 IP 是否被使用过
-                    if (not self.is_proxy_ip_used()):
-                        # 测试地区是否通过
-                        if (not self.is_location_ok()):
-                            continue
-                        r_logger.info("测试节点地区正确！")
-                        # 测试网站访问是否通过
-                        if (not self.is_access_ok()):
-                            self.banned_nodes.append(node_id)
-                            continue
-                        r_logger.info("测试节点网站访问通过！")
-                        r_logger.info("节点切换完成！")
-                        r_logger.debug("至今已使用过的节点：{}".format(
-                            str(self.used_nodes)))
-                        return True
-                    # 如果已经被使用过
-                    else:
+    def change(self):
+        # 循环所有节点
+        for node in self.all_nodes:
+            # 判断使用过的节点等信息是否需要清理
+            if (len(self.used_node_ids) >= self.non_repetitive_node_num):
+                self.clear()
+            # 判断节点和 IP 都没有被使用过，并且也不在封禁列表中
+            if (node["id"] not in self.used_node_ids
+                    and node["id"] not in self.banned_node_ids):
+                # 将节点记为已使用
+                self.used_node_ids.append(node["id"])
+                r_logger.info("使用节点：{}".format(str(node)))
+                # 修改容器内配置
+                self.configure(node)
+                # 判断更新后节点的出口 IP 是否被使用过
+                if (not self.is_proxy_out_ip_used()):
+                    # 测试地区是否通过
+                    if (not self.is_location_ok()):
+                        r_logger.info("节点地区并不符合要求，跳过！")
                         continue
+                    r_logger.info("测试节点地区符合要求！")
+                    # 测试网站访问是否通过
+                    if (not self.is_access_ok()):
+                        self.banned_node_ids.append(node["id"])
+                        continue
+                    r_logger.info("测试节点网站访问通过！")
+                    r_logger.info("节点切换完成！")
+                    r_logger.debug("至今已使用过的节点：{}".format(
+                        str(self.used_node_ids)))
+                    return True
+                # 如果已经被使用过
                 else:
                     continue
+            else:
+                continue
         # 如果已经遍历了一遍，则清空所有节点信息
         self.clear()
         return False
-    
+
     """
     @description: 清理已经使用过的节点信息
     -------
@@ -664,26 +659,8 @@ class r_subscription:
     def clear(self):
         self.used_nodes = []
         self.banned_nodes = []
-        self.used_proxy_ips = []
+        self.used_proxy_out_ips = []
 
-    """
-    @description: 判断此节点是否已经使用过
-    -------
-    @param:
-    -------
-    @return:
-    """
-    def is_node_used(self, node_id):
-        # 已经使用过
-        if (node_id in self.used_nodes):
-            r_logger.info("{} 节点已经使用过了。".format(node_id))
-            return True
-        # 尚未使用过
-        else:
-            r_logger.info("{} 节点尚未被使用过！".format(node_id))
-            self.used_nodes.append(node_id)
-            return False
-    
     """
     @description: 判断出口 IP 是否被使用过
     -------
@@ -691,30 +668,30 @@ class r_subscription:
     -------
     @return:
     """
-    def is_proxy_ip_used(self):
+    def is_proxy_out_ip_used(self):
         # 获取这个节点的出口 IP 信息
-        self.proxy_info = get_proxy_info(self.proxies)
+        self.proxy_info = rab_requests.get_ip_info(self.proxies)
         # 节点畅通
-        if (self.proxy_info):
+        if (self.proxy_info["ip"]):
             r_logger.info("当前节点出口 IP：{}".format(
-                str(self.proxy_info["query"])))
+                str(self.proxy_info["ip"])))
             r_logger.info("已经使用过的 IP：{}".format(
-                str(self.used_proxy_ips)))
+                str(self.used_proxy_out_ips)))
             # 如果这个 IP 已经使用过
-            if (self.proxy_info["query"] in self.used_proxy_ips):
+            if (self.proxy_info["ip"] in self.used_proxy_out_ips):
                 r_logger.info(
                     "节点未使用过但是出口 IP 已经被使用过，废弃......")
                 return True
             # 如果这个 IP 尚未使用过
             else:
                 r_logger.info("节点畅通且 IP 未使用过！")
-                self.used_proxy_ips.append(self.proxy_info["query"])
+                self.used_proxy_out_ips.append(self.proxy_info["ip"])
                 return False
         # 出错情况下也返回已经使用过以跳过
         else:
             r_logger.info("节点不畅通，废弃......")
             return True
-
+    
     """
     @description: 判断此节点是否在所属地域
     -------
@@ -725,7 +702,7 @@ class r_subscription:
     def is_location_ok(self):
         # 如果没有地区限制或者满足地区限制，返回 True
         if (not self.proxy_location
-                or self.proxy_info["country"] in self.proxy_location):
+                or self.proxy_info["location"] in self.proxy_location):
             return True
         else:
             return False
@@ -754,7 +731,6 @@ class r_subscription:
                 return False
         return True
 
-
 """
 @description: 单体测试
 -------
@@ -763,26 +739,40 @@ class r_subscription:
 @return:
 """
 if __name__ == "__main__":
-    r_subscription = r_subscription()
-    if (r_subscription.start()):
-        try:
-            no = 1
-            # 打印节点信息
-            # for node_info in r_subscription.all_node_infos["ssr"]:
-            #     print(no, node_info)
-            #     print(no, parse_node_info("ssr", node_info))
-            #     print(no, generate_configure_command("vmess", node_info))
-            #     no += 1
-            # 测试 Docker
-            for _ in range(0, 10):
-                r_subscription.change("ssr")
-                print("已证实可使用 IP：",
-                    len(r_subscription.used_proxy_ips), " 个！")
-                no += 1
-        except Exception as e:
-            print(e)
-        finally:
-            pass
-            # 关闭所有容器
-            for node_protocol in r_subscription.all_node_infos.keys():
-                r_subscription.close_container(node_protocol)
+    pass
+    # 解析每个订阅链接
+    # with open("nodes/subscription_urls.txt", "r") as f:
+    #     subscription_urls = f.readlines()
+    # _subscription_urls = []
+    # for subscription_url in subscription_urls:
+    #     _subscription_urls.append(subscription_url.replace("\n", ""))
+    # with open("nodes/all.txt", "w") as f:
+    #     nodes = get_nodes(_subscription_urls)
+    #     for node in nodes:
+    #         f.write("{}\n".format(generate_configure_command(node)))
+
+    # 对比节点链接和配置获取是否正确的测试
+    # subscription_origin_infos = get_subscription_origin_infos([
+    #     ""])
+    # for subscription_url in subscription_origin_infos.keys():
+    #     node_urls = get_node_urls(subscription_origin_infos[subscription_url])
+    #     print(subscription_url)
+    #     print("="*20)
+    #     for node_url in node_urls:
+    #         # print(node_url)
+    #         print(parse_node_url(node_url))
+    #     print("="*20)
+
+    # 对节点链接参数获取的测试
+    # url = ""
+    # print(get_param_value("allowInsecure", url))
+    # serach_obj = re.search(r".*allowInsecure=(.*)#.*", url)
+    # if (serach_obj):
+    #     print(serach_obj.group())
+    #     print(serach_obj.group(1))
+
+    # 类测试
+    # r_subscription = r_subscription()
+    # r_subscription.start()
+    # for _ in range(0, 5):
+    #     r_subscription.change()

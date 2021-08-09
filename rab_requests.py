@@ -34,7 +34,7 @@ def get_ip_info(proxies=None,
                     "rab_config.ini", "rab_requests", "timeout"))):
     try:
         r = requests.get("http://ip-api.com/json/?lang=zh-CN",
-                         proxies=proxy,
+                         proxies=proxies,
                          timeout=timeout)
         return {
             "ip": json.loads(r.text)["query"],
@@ -98,15 +98,17 @@ def ensure_get(url,
     r_logger.info("不使用代理无法访问的情况下，开始尝试使用代理访问：{}".format(url))
     # 使用自建 SOCKS5 代理进行访问
     personal_proxy_infos = rab_proxy.get_personal_proxy_infos()
-    for proxy_info in personal_proxy_infos["socks5"]:
-        proxies = rab_proxy.parse_proxy_info("socks5", proxy_info)
+    for proxy_out_ip in personal_proxy_infos["socks5"]:
+        proxies = rab_proxy.parse_proxy_info(
+            "socks5", personal_proxy_infos["socks5"][proxy_out_ip])
         try:
             r = requests.get(url, proxies=proxies, timeout=timeout)
         except Exception as e:
             r_logger.info("在使用代理的情况下也无法访问：{url}！错误信息：{e}" \
                 .format(url=url, e=str(e)))
             r_logger.info("使用的代理：{proxies}".format(proxies=str(proxies)))
-    r_error("所有自建代理均无法访问：{url} 请检查地址或自建代理！".format(url=url))
+    r_logger.error(
+        "所有自建代理均无法访问：{url} 请检查地址或自建代理！".format(url=url))
     return None
 
 

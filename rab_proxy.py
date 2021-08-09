@@ -189,13 +189,13 @@ def parse_proxy_info(proxy_method, proxy_info):
     elif(proxy_method == "http"):
         return {
             "http": "http://{auth}@{host}:{port}".format(**proxy_info),
-            "https": "http://{auth}@{host}:{port}".format(**proxy_info),
+            "https": "http://{auth}@{host}:{port}".format(**proxy_info)
         }
     # SOCKS5 代理
     elif(proxy_method == "socks5"):
         return {
             "http": "socks5h://{auth}@{host}:{port}".format(**proxy_info),
-            "https": "socks5h://{auth}@{host}:{port}".format(**proxy_info),
+            "https": "socks5h://{auth}@{host}:{port}".format(**proxy_info)
         }
 
 
