@@ -162,7 +162,7 @@ class r_pgsql_driver():
         # 与数据库之间的连接
         self.conn = None
         # 用户
-        self.r_pgsql_user = r_pgsql_user()
+        self.r_pgsql_user = r_pgsql_user(user=self.user)
 
     """
     @description: 建立数据库连接
