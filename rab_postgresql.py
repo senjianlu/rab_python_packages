@@ -54,7 +54,8 @@ class r_pgsql_user():
     """
     def __init__(self, user=None, time=None, ip=None):
         # 用户名
-        self.user = self.get_user() if not user else user
+        self.user = user
+        self.user = self.get_user()
         # 更新时间
         self.time = None
         # IP
@@ -68,27 +69,29 @@ class r_pgsql_user():
     @return:
     """
     def get_user(self):
-        user = ""
-        # 获得数据库用户
-        try:
-            if (rab_config.load_package_config(
-                    "rab_config.ini", "common", "user")):
-                user += str(rab_config.load_package_config(
-                    "rab_config.ini", "common", "user"))
-            else:
-                user += "unknown_pgsql_user"
-        except Exception as e:
-            user += "unknown_pgsql_user"
-        # 节点名作为附加
-        try:
-            if (rab_config.load_package_config(
-                    "rab_config.ini", "rab_distributed_system", "node_id")):
-                user += " ({})".format(str(rab_config.load_package_config(
-                    "rab_config.ini", "rab_distributed_system", "node_id")))
-        except Exception as e:
-            print(e)
-            pass
-        return user
+        # 如果当前没有用户名
+        if (not self.user):
+            # 获得数据库用户
+            try:
+                if (rab_config.load_package_config(
+                        "rab_config.ini", "common", "user")):
+                    self.user = str(rab_config.load_package_config(
+                        "rab_config.ini", "common", "user"))
+                else:
+                    self.user = "unknown_pgsql_user"
+            except Exception as e:
+                self.user = "unknown_pgsql_user"
+        # 如果当前没有节点备注
+        if ("(" not in self.user):
+            # 节点名作为附加
+            try:
+                if (rab_config.load_package_config(
+                        "rab_config.ini", "rab_distributed_system", "node_id")):
+                    self.user += " ({})".format(str(rab_config.load_package_config(
+                        "rab_config.ini", "rab_distributed_system", "node_id")))
+            except Exception as e:
+                pass
+        return self.user
     
     """
     @description: 获取当前时间
@@ -158,6 +161,8 @@ class r_pgsql_driver():
         self.cur = None
         # 与数据库之间的连接
         self.conn = None
+        # 用户
+        self.r_pgsql_user = r_pgsql_user()
 
     """
     @description: 建立数据库连接
@@ -361,7 +366,8 @@ class r_pgsql_driver():
 @return:
 """
 if __name__ == "__main__":
-    r_pgsql_user = r_pgsql_user()
-    print(r_pgsql_user.get_user())
-    print(r_pgsql_user.get_time())
-    print(r_pgsql_user.get_ip())
+    r_pgsql_driver = r_pgsql_driver()
+    print(r_pgsql_driver.select("SELECT 1;"))
+    print(r_pgsql_driver.r_pgsql_user.get_user())
+    print(r_pgsql_driver.r_pgsql_user.get_time())
+    print(r_pgsql_driver.r_pgsql_user.get_ip())
