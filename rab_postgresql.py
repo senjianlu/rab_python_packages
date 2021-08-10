@@ -9,11 +9,13 @@
 # @DESCRIPTION: 共通包 PostgreSQL 数据库驱动
 
 
+import datetime
 import psycopg2
 import psycopg2.extras
 # 切换路径到父级
 import sys
 sys.path.append("..") if (".." not in sys.path) else True
+from rab_python_packages import rab_requests
 from rab_python_packages import rab_logging
 from rab_python_packages import rab_config
 
@@ -35,7 +37,82 @@ def get_batch_size():
 
 
 """
-@description: r_proxy 类
+@description: r_pgsql_user 类
+-------
+@param:
+-------
+@return:
+"""
+class r_pgsql_user():
+
+    """
+    @description: 初始化
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def __init__(self, user=None, time=None, ip=None):
+        # 用户名
+        self.user = self.get_user() if not user else user
+        # 更新时间
+        self.time = None
+        # IP
+        self.ip = rab_requests.get_ip_info()["ip"] if not ip else ip
+    
+    """
+    @description: 获取用户
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def get_user(self):
+        user = ""
+        # 获得数据库用户
+        try:
+            if (rab_config.load_package_config(
+                    "rab_config.ini", "common", "user")):
+                user += str(rab_config.load_package_config(
+                    "rab_config.ini", "common", "user"))
+            else:
+                user += "unknown_pgsql_user"
+        except Exception as e:
+            user += "unknown_pgsql_user"
+        # 节点名作为附加
+        try:
+            if (rab_config.load_package_config(
+                    "rab_config.ini", "rab_distributed_system", "node_id")):
+                user += " ({})".format(str(rab_config.load_package_config(
+                    "rab_config.ini", "rab_distributed_system", "node_id")))
+        except Exception as e:
+            print(e)
+            pass
+        return user
+    
+    """
+    @description: 获取当前时间
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def get_time(self):
+        return datetime.datetime.now(datetime.timezone.utc)
+    
+    """
+    @description: 获取 IP
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def get_ip(self):
+        return self.ip
+
+
+"""
+@description: r_pgsql_driver 类
 -------
 @param:
 -------
@@ -74,6 +151,9 @@ class r_pgsql_driver():
         self.port = port
         # 是否显示列名
         self.show_column_name = show_column_name
+        # 批量插入数
+        self.batch_size = int(rab_config.load_package_config(
+            "rab_config.ini", "rab_postgresql", "batch_size"))
         # 指针
         self.cur = None
         # 与数据库之间的连接
@@ -86,7 +166,7 @@ class r_pgsql_driver():
     -------
     @return:
     """
-    def create(self):
+    def connect(self):
         # 创建连接对象
         self.conn = psycopg2.connect(database=self.database,
                                      user=self.user,
@@ -107,7 +187,7 @@ class r_pgsql_driver():
     -------
     @return: bool
     """
-    def test_connection(self):
+    def test(self):
         test_sql = "SELECT 1;"
         try:
             self.cur.execute(test_sql)
@@ -115,18 +195,8 @@ class r_pgsql_driver():
             if (result_list):
                 return True
         except Exception:
-            return False
+            pass
         return False
-
-    """
-    @description: 数据库重连
-    -------
-    @param:
-    -------
-    @return:
-    """
-    def reconnect(self):
-        self.create()
 
     """
     @description: 关闭数据库连接
@@ -142,29 +212,48 @@ class r_pgsql_driver():
             self.conn.close()
         self.cur = None
         self.conn = None
-
+    
     """
-    @description: 清空数据库
+    @description: 数据库重连
     -------
-    @param: table_name<str>
+    @param:
     -------
-    @return: <bool>
+    @return:
     """
-    def delete_all(self, table_name):
+    def reconnect(self):
+        self.close()
+        self.connect()
+    
+    """
+    @description: 查询语句
+    -------
+    @param: sql<str>, data<list>
+    -------
+    @return: <list>
+    """
+    def select(self, sql, data=None):
         # 测试当前连接是否可用，不可用则重连
-        if (not self.test_connection()):
+        if (not self.test()):
             self.reconnect()
-        sql = "DELETE FROM {}".format(table_name)
         try:
-            self.cur.execute(sql)
-            self.conn.commit()
-            r_logger.info("{} 表清空成功！".format(table_name))
-            return True
+            self.cur.execute(sql, data)
+            select_result = self.cur.fetchall()
+            r_logger.info("查询成功！")
+            r_logger.info("SQL 文：{}".format(str(sql)))
+            r_logger.info("参数：{}".format(str(data))) if data else False
+            if (len(str(select_result)) > 120):
+                r_logger.info("结果：{select_result}......行数{row_num}".format(
+                    select_result=str(select_result)[0:100], row_num=str(
+                        len(select_result))))
+            else:
+                r_logger.info("结果：{}".format(str(select_result)))
+            return select_result
         except Exception as e:
-            r_logger.error("{} 表清空失败！".format(table_name))
+            r_logger.error("查询失败！")
             r_logger.error(e)
-            r_logger.error("SQL 文："+str(sql))
-            return False
+            r_logger.error("SQL 文：{}".format(str(sql)))
+            r_logger.error("参数：{}".format(str(data))) if data else False
+            return []
 
     """
     @description: 执行单一 SQL 语句
@@ -173,21 +262,64 @@ class r_pgsql_driver():
     -------
     @return:
     """
-    def execute(self, sql):
+    def execute(self, sql, data=None):
         # 测试当前连接是否可用，不可用则重连
-        if (not self.test_connection()):
+        if (not self.test()):
             self.reconnect()
         try:
-            self.cur.execute(sql)
+            self.cur.execute(sql, data)
             self.conn.commit()
             r_logger.info("SQL 执行成功！")
-            r_logger.info("SQL 文："+str(sql))
+            r_logger.info("SQL 文：{}".format(str(sql)))
+            r_logger.info("参数：{}".format(str(data))) if data else False
             return True
         except Exception as e:
             r_logger.error("SQL 执行失败！")
             r_logger.error(e)
-            r_logger.error("SQL 文："+str(sql))
+            r_logger.error("SQL 文：{}".format(str(sql)))
+            r_logger.info("参数：{}".format(str(data))) if data else False
             return False
+
+    """
+    @description: 插入语句
+    -------
+    @param: sql<str>, data<list>
+    -------
+    @return: <list>
+    """
+    def insert(self, sql, data=None):
+        return self.execute(sql, data)
+    
+    """
+    @description: 更新语句
+    -------
+    @param: sql<str>, data<list>
+    -------
+    @return: <list>
+    """
+    def update(self, sql, data=None):
+        return self.execute(sql, data)
+    
+    """
+    @description: 删除语句
+    -------
+    @param: sql<str>, data<list>
+    -------
+    @return: <list>
+    """
+    def delete(self, sql, data=None):
+        return self.execute(sql, data)
+    
+    """
+    @description: 清空表
+    -------
+    @param: table_name<str>
+    -------
+    @return: <bool>
+    """
+    def delete_all(self, table):
+        sql = "DELETE FROM {}".format(table)
+        return self.execute(sql)
 
     """
     @description: 根据提供的 SQL 语句处理多条数据
@@ -196,59 +328,29 @@ class r_pgsql_driver():
     -------
     @return: <bool>
     """
-    def execute_many(self, sql, data, page_size=get_batch_size()):
+    def execute_many(self, sql, data):
         # 测试当前连接是否可用，不可用则重连
-        if (not self.test_connection()):
+        if (not self.test()):
             self.reconnect()
         try:
             # executemany 因为效率问题放弃
             # cur.executemany(sql, data)
             # 改为 execute_batch
-            psycopg2.extras.execute_batch(self.cur,
-                                          sql,
-                                          data,
-                                          page_size=page_size)
+            psycopg2.extras.execute_batch(
+                self.cur, sql, data, page_size=self.batch_size)
             self.conn.commit()
             r_logger.info("数据插入或更新成功！")
-            r_logger.info("SQL 文："+str(sql))
-            r_logger.info("数据："+str(data)[0:40]+"......行数："+str(len(data)))
+            r_logger.info("SQL 文：{}".format(str(sql)))
+            r_logger.info("数据：{data}......行数：{row_num}".format(
+                data=str(data)[0:40], row_num=str(len(data))))
             return True
         except Exception as e:
             r_logger.error("数据插入或更新失败！")
             r_logger.error(e)
-            r_logger.error("SQL 文："+str(sql))
-            r_logger.error("数据："+str(data))
+            r_logger.error("SQL 文：{}".format(str(sql)))
+            r_logger.error("数据：{data}......行数：{row_num}".format(
+                data=str(data), row_num=str(len(data))))
             return False
-
-    """
-    @description: 查询语句
-    -------
-    @param: sql<str>, args<list>
-    -------
-    @return: <list>
-    """
-    def select(self, sql, args=None):
-        # 测试当前连接是否可用，不可用则重连
-        if (not self.test_connection()):
-            self.reconnect()
-        try:
-            self.cur.execute(sql, args)
-            result_list = self.cur.fetchall()
-            r_logger.info("查询成功！")
-            r_logger.info("SQL 文："+str(sql))
-            r_logger.info("参数："+str(args)) if args else False
-            if (len(str(result_list)) > 120):
-                r_logger.info("结果："+str(result_list)[0:100] \
-                    +"......行数："+str(len(result_list)))
-            else:
-                r_logger.info("结果："+str(result_list))
-            return result_list
-        except Exception as e:
-            r_logger.error("查询失败！")
-            r_logger.error(e)
-            r_logger.error("SQL 文："+str(sql))
-            r_logger.error("参数："+str(args)) if args else False
-            return []
 
 
 """
@@ -259,4 +361,7 @@ class r_pgsql_driver():
 @return:
 """
 if __name__ == "__main__":
-    pass
+    r_pgsql_user = r_pgsql_user()
+    print(r_pgsql_user.get_user())
+    print(r_pgsql_user.get_time())
+    print(r_pgsql_user.get_ip())
