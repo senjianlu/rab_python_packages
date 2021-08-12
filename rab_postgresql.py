@@ -9,11 +9,10 @@
 # @DESCRIPTION: 共通包 PostgreSQL 数据库驱动
 
 
+import sys
 import datetime
 import psycopg2
 import psycopg2.extras
-# 切换路径到父级
-import sys
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_requests
 from rab_python_packages import rab_logging
@@ -85,10 +84,11 @@ class r_pgsql_user():
         if ("(" not in self.user):
             # 节点名作为附加
             try:
-                if (rab_config.load_package_config(
-                        "rab_config.ini", "rab_distributed_system", "node_id")):
-                    self.user += " ({})".format(str(rab_config.load_package_config(
-                        "rab_config.ini", "rab_distributed_system", "node_id")))
+                if (rab_config.load_package_config("rab_config.ini", \
+                        "rab_distributed_system", "node_id")):
+                    self.user += " ({})".format(str(
+                        rab_config.load_package_config("rab_config.ini", \
+                            "rab_distributed_system", "node_id")))
             except Exception as e:
                 pass
         return self.user

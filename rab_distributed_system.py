@@ -34,6 +34,14 @@ def get_node_id():
 @return:
 """
 def get_node_delay_time():
+    # 获取节点所需要等待的单位时间
     node_delay_time = rab_config.load_package_config(
         "rab_config.ini", "rab_distributed_system", "node_delay_time")
-    return node_delay_time
+    # 获取节点序号，除开 main 之外均需等待
+    node_no = get_node_id().split("_")[-1]
+    if ("main" ==  node_no.lower()):
+        return 0
+    elif(node_no.isdigit()):
+        return int(node_delay_time)*int(node_no)
+    else:
+        return 0
