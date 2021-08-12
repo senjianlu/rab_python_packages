@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: E:\Github\rab_python_packages\rab_config.py
+# @FILE: /root/GitHub/rab_python_packages/rab_config.py
 # @DATE: 2020/12/29 周二
 # @TIME: 19:50:03
 #

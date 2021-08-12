@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: /root/GitHub/daily-swap/rab_python_packages/rab_chrome.py
+# @FILE: /root/GitHub/rab_python_packages/rab_chrome.py
 # @DATE: 2021/07/30 Fri
 # @TIME: 23:00:08
 #

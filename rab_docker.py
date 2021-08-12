@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: /root/GitHub/steammarket/rab_python_packages/rab_docker.py
+# @FILE: /root/GitHub/rab_python_packages/rab_docker.py
 # @DATE: 2021/08/07 Sat
 # @TIME: 16:03:08
 #

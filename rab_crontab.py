@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: /root/GitHub/steammarket/rab_python_packages/rab_crontab.py
+# @FILE: /root/GitHub/rab_python_packages/rab_crontab.py
 # @DATE: 2021/08/12 Thu
 # @TIME: 09:30:35
 #

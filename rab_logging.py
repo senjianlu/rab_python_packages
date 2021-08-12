@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: \rab_python_packages\rab_logging.py
+# @FILE: /root/GitHub/rab_python_packages/rab_logging.py
 # @DATE: 2020/12/16 Wed
 # @TIME: 16:50:21
 #

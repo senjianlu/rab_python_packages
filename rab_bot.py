@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: \rab_python_packages\rab_telegram_bot.py
+# @FILE: /root/GitHub/rab_python_packages/rab_telegram_bot.py
 # @DATE: 2020/12/16 Wed
 # @TIME: 16:29:07
 #

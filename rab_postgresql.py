@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: \rab_python_packages\rab_pgsql_driver.py
+# @FILE: /root/GitHub/rab_python_packages/rab_postgresql.py
 # @DATE: 2020/12/17 周四
 # @TIME: 11:03:40
 #
