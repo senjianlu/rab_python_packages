@@ -32,18 +32,37 @@ r_logger = rab_logging.r_logger()
 def get_ip_info(proxies=None,
                 timeout=int(rab_config.load_package_config(
                     "rab_config.ini", "rab_requests", "timeout"))):
+    # 接口：http://ip-api.com/json/?lang=zh-CN
     try:
         r = requests.get("http://ip-api.com/json/?lang=zh-CN",
                          proxies=proxies,
                          timeout=timeout)
+        r_json = json.loads(r.text)
+        ip = r_json["query"] if "query" in r_json else None
+        location = r_json["country"] if "country" in r_json else None
         return {
-            "ip": json.loads(r.text)["query"],
-            "location": json.loads(r.text)["country"]
+            "ip": ip,
+            "location": location
         }
     except Exception as e:
-        r_logger.error("获取 IP 信息出错！")
+        r_logger.error("使用 ip-api.com 获取 IP 信息出错！")
         r_logger.error(e)
-        return {"ip": None, "location": None}
+    # 接口：https://www.ip.cn/api/index?ip=&type=0
+    try:
+        r = requests.get("https://www.ip.cn/api/index?ip=&type=0",
+                         proxies=proxies,
+                         timeout=timeout)
+        r_json = json.loads(r.text)
+        ip = r_json["ip"] if "ip" in r_json else None
+        location = r_json["address"] if "address" in r_json else None
+        return {
+            "ip": ip,
+            "location": location
+        }
+    except Exception as e:
+        r_logger.error("使用 ip.cn 获取 IP 信息出错！")
+        r_logger.error(e)
+    return {"ip": None, "location": None}
 
 """
 @description: 测试访问
@@ -187,4 +206,5 @@ class r_requests():
 @return:
 """
 if __name__ == "__main__":
+    print(get_ip_info())
     pass
