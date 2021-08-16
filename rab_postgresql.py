@@ -356,6 +356,20 @@ class r_pgsql_driver():
             r_logger.error("数据：{data}......行数：{row_num}".format(
                 data=str(data), row_num=str(len(data))))
             return False
+    
+    """
+    @description: 获取用户信息列表
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def get_user_info(self):
+        return [
+            self.r_pgsql_user.get_user(),
+            self.r_pgsql_user.get_time(),
+            self.r_pgsql_user.get_ip()
+        ]
 
 
 """

@@ -126,7 +126,8 @@ def get_proxy_infos(location=None, level=None):
         # 如果有地区限制，多加一行搜索条件
         if (location):
             select_filter_2_append = """
-                AND proxy.location = '{}'
+                AND proxy.location IS NOT NULL
+                AND proxy.location LIKE '%{}%'
             """.format(location)
             select_sql = select_sql + select_filter_2_append
         # 搜索
