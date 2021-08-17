@@ -380,8 +380,11 @@ class r_pgsql_driver():
 @return:
 """
 if __name__ == "__main__":
-    r_pgsql_driver = r_pgsql_driver()
+    r_pgsql_driver = r_pgsql_driver(show_column_name=True)
     print(r_pgsql_driver.select("SELECT 1;"))
+    for row in result:
+        print(row)
     print(r_pgsql_driver.r_pgsql_user.get_user())
     print(r_pgsql_driver.r_pgsql_user.get_time())
     print(r_pgsql_driver.r_pgsql_user.get_ip())
+    r_pgsql_driver.close()

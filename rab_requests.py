@@ -188,12 +188,53 @@ class r_requests():
                     proxies=_proxies, timeout=timeout)
                 return r_r
             except Exception as e:
-                r_logger.info("r_requests.get 第 {try_no} 次访问出错！{e}".format(
+                r_logger.info("第 {try_no} 次访问出错！{e}".format(
                     try_no=str(try_no), e=str(e)))
                 r_logger.info("使用的代理：{}".format(str(_proxies)))
                 continue
         # 尝试了最大次数后仍然失败
         r_logger.warn("共 {} 次访问出错，达到上限访问结束！".format(
+            str(self.max_retry_num)))
+        return None
+    
+    """
+    @description: Post 方法
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def post(self,
+             web,
+             url,
+             params=None,
+             headers=None,
+             data=None,
+             proxies=None,
+             timeout=None):
+        # 最大尝试次数
+        for try_no in range(1, self.max_retry_num+1):
+            # 判断是否传入了代理
+            if (proxies):
+                _proxies = proxies
+            else:
+                _proxies = self.r_proxy.get(web=web)
+            # 判断是否传入了超时时间
+            if (timeout):
+                pass
+            else:
+                timeout = self.timeout
+            try:
+                r_r = requests.post(url, params=params, headers=headers, \
+                    data=data, proxies=_proxies, timeout=timeout)
+                return r_r
+            except Exception as e:
+                r_logger.info("第 {try_no} 次 Post 出错！{e}".format(
+                    try_no=str(try_no), e=str(e)))
+                r_logger.info("使用的代理：{}".format(str(_proxies)))
+                continue
+        # 尝试了最大次数后仍然失败
+        r_logger.warn("共 {} 次 Post 出错，达到上限访问结束！".format(
             str(self.max_retry_num)))
         return None
 
