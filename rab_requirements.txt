@@ -6,3 +6,5 @@ requests[socks]>=2.10.0
 minio==7.1.0
 docker==5.0.0
 six==1.16.0
+singleton_decorator==1.0.0
+pika==1.2.0
