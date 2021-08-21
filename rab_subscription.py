@@ -285,6 +285,9 @@ def get_node_urls(subscription_origin_info):
 @return:
 """
 def parse_node_url(node_url):
+    # 存在节点信息不符合规范情况
+    node = None
+    print(node_url)
     if (node_url.startswith("ssr://")):
         node = parse_ssr_node_url(node_url)
     elif(node_url.startswith("ss://")):
@@ -330,8 +333,14 @@ def get_nodes(subscription_urls):
         node_urls = get_node_urls(subscription_origin_infos[subscription_url])
         for node_url in node_urls:
             node = parse_node_url(node_url)
-            node["subscription_url"] = subscription_url
-            nodes.append(node)
+            # 正确获得了节点
+            if (node):
+                node["subscription_url"] = subscription_url
+                nodes.append(node)
+            else:
+                r_logger.warn(
+                    "出现了不符合规范的节点地址：{}".format(str(node_url)))
+                continue
     # 筛选节点
     nodes = filter_nodes(nodes)
     return nodes
