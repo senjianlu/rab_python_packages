@@ -289,7 +289,6 @@ def get_node_urls(subscription_origin_info):
 def parse_node_url(node_url):
     # 存在节点信息不符合规范情况
     node = None
-    print(node_url)
     if (node_url.startswith("ssr://")):
         node = parse_ssr_node_url(node_url)
     elif(node_url.startswith("ss://")):
