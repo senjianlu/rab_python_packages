@@ -271,9 +271,10 @@ def get_subscription_origin_infos(subscription_urls):
 """
 def get_node_urls(subscription_origin_info):
     node_urls = []
-    subscription_info = b64decode(subscription_origin_info).decode("UTF-8")
+    subscription_info = b64decode(subscription_origin_info)
     # 存在防 CC 之类措施而导致获取原始信息失败
     if (subscription_info):
+        subscription_info = subscription_info.decode("UTF-8")
         for row in subscription_info.split("\n"):
             if (row.strip()):
                 node_urls.append(row.strip())
