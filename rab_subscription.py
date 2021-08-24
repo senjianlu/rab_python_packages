@@ -271,10 +271,13 @@ def get_subscription_origin_infos(subscription_urls):
 """
 def get_node_urls(subscription_origin_info):
     node_urls = []
-    subscription_info = b64decode(subscription_origin_info).decode("UTF-8")
-    for row in subscription_info.split("\n"):
-        if (row.strip()):
-            node_urls.append(row.strip())
+    subscription_info = b64decode(subscription_origin_info)
+    # 存在防 CC 之类措施而导致获取原始信息失败
+    if (subscription_info):
+        subscription_info = subscription_info.decode("UTF-8")
+        for row in subscription_info.split("\n"):
+            if (row.strip()):
+                node_urls.append(row.strip())
     return node_urls
 
 """
@@ -287,7 +290,6 @@ def get_node_urls(subscription_origin_info):
 def parse_node_url(node_url):
     # 存在节点信息不符合规范情况
     node = None
-    print(node_url)
     if (node_url.startswith("ssr://")):
         node = parse_ssr_node_url(node_url)
     elif(node_url.startswith("ss://")):

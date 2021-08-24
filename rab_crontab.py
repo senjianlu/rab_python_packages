@@ -50,13 +50,13 @@ def get_last_whole_timestamp(timestamp=int(time.time()), method="minute"):
 @return:
 """
 def get_next_whole_timestamp(timestamp=int(time.time()), method="minute"):
-    if (method=="minute"):
+    if (method == "minute"):
         return ((timestamp//60)+1) * 60
-    elif(method=="hour"):
+    elif(method == "hour"):
         return ((timestamp//3600)+1) * 3600
-    elif(method=="day"):
+    elif(method == "day"):
         return ((timestamp//86400)+1) * 86400
-    elif(method=="month"):
+    elif(method == "month"):
         return int(time.mktime(datetime.date(
             datetime.date.today().year, \
             datetime.date.today().month,1).timetuple()))
