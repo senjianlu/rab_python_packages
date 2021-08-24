@@ -13,6 +13,7 @@ import sys
 import json
 import uuid
 import pika
+import requests
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 from rab_python_packages import rab_logging
@@ -46,11 +47,14 @@ class r_rabbitmq():
                  host=rab_config.load_package_config(
                      "rab_config.ini", "rab_rabbitmq", "host"),
                  port=rab_config.load_package_config(
-                     "rab_config.ini", "rab_rabbitmq", "port")):
+                     "rab_config.ini", "rab_rabbitmq", "port"),
+                 api_host=rab_config.load_package_config(
+                     "rab_config.ini", "rab_rabbitmq", "api_host")):
         self.username = username
         self.password = password
         self.host = host
         self.port = port
+        self.api_host = api_host
         self.connection = {}
         self.channel = {}
     
@@ -173,6 +177,28 @@ class r_rabbitmq():
                 self.channel[channel_name].basic_nack(method.delivery_tag)
         # 没有结果的情况下返回空
         return None
+    
+    """
+    @description: 获取队列长度
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def get_message_count(self, queue, vhost="%2F"):
+        try:
+            url = "{api_host}/api/queues/{vhost}/{queue}".format(
+                api_host=self.api_host, vhost=vhost, queue=queue)
+            r = requests.get(url, auth=(self.username, self.password))
+            result = json.loads(r.text)
+            ready = result['messages_ready']
+            unacknowledged = result['messages_unacknowledged']
+            total = result['messages']
+            return ready, unacknowledged, total
+        except Exception as e:
+            r_logger.error("RabbitMQ 获取队列长度时出错！")
+            r_logger.error(e)
+        return None, None, None
 
 
 """
@@ -185,17 +211,20 @@ class r_rabbitmq():
 if __name__ == "__main__":
 
     r_rabbitmq = r_rabbitmq()
-    r_rabbitmq.connect()
-    r_rabbitmq.build_channel("test_channel")
+    r_rabbitmq.connect("test_connection")
+    r_rabbitmq.build_channel("test_connection", "test_channel")
 
     # 测试是否能正常推送消息和根据 UUID 获取结果
-    try:
-        for uuid in range(123450, 123460):
-            body = json.dumps({"uuid": str(uuid)})
-            r_rabbitmq.publish("test_channel", "test_quere", body)
-        print("获得结果:{}".format(
-            r_rabbitmq.get("test_channel", "test_quere", "123456")))
-    except Exception as e:
-        print("测试出错：{}".format(str(e)))
-    finally:
-        r_rabbitmq.disconnect()
+    # try:
+    #     for uuid in range(123450, 123460):
+    #         body = json.dumps({"uuid": str(uuid)})
+    #         r_rabbitmq.publish("test_channel", "test_quere", body)
+    #     print("获得结果:{}".format(
+    #         r_rabbitmq.get("test_channel", "test_quere", "123456")))
+    # except Exception as e:
+    #     print("测试出错：{}".format(str(e)))
+    # finally:
+    #     r_rabbitmq.disconnect()
+
+    # 测试队列长度是否获取正确
+    print(r_rabbitmq.get_message_count("test_quere"))
