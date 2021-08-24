@@ -51,7 +51,7 @@ class r_rabbitmq():
         self.password = password
         self.host = host
         self.port = port
-        self.connection = None
+        self.connection = {}
         self.channel = {}
     
     """
@@ -61,14 +61,14 @@ class r_rabbitmq():
     -------
     @return:
     """
-    def connect(self):
+    def connect(self, connection_name):
         auth = pika.PlainCredentials(self.username, self.password)
         try:
-            self.connection = pika.BlockingConnection(
+            self.connection[connection_name] = pika.BlockingConnection(
                 pika.ConnectionParameters(self.host, int(self.port), "/", auth))
         except Exception as e:
-            r_logger.error("RabbitMQ 建立连接时出错！")
-            r_logger.error(e)
+            print("RabbitMQ 建立连接 {} 时出错！".format(connection_name))
+            print(str(e))
             return False
         return True
     
@@ -79,11 +79,12 @@ class r_rabbitmq():
     -------
     @return:
     """
-    def build_channel(self, channel_name):
+    def build_channel(self, connection_name, channel_name):
         if (channel_name not in self.channel.keys()):
-            self.channel[channel_name] = self.connection.channel()
+            self.channel[channel_name] = self.connection[
+                connection_name].channel()
         else:
-            r_logger.warn("RabbitMQ 已经存在频道：{}".format(channel_name))
+            print("RabbitMQ 已经存在频道：{}".format(channel_name))
     
     """
     @description: 关闭连接
@@ -93,23 +94,30 @@ class r_rabbitmq():
     @return:
     """
     def disconnect(self):
+        # 关闭所有频道
         if (self.channel):
             for channel_name in self.channel.keys():
-                try:
-                    self.channel[channel_name].close()
-                except Exception as e:
-                    r_logger.error("RabbitMQ 频道关闭出错！")
-                    r_logger.error(e)
-                finally:
-                    self.channel[channel_name] = None
+                if (self.channel[channel_name]
+                        and self.channel[channel_name].is_open):
+                    try:
+                        self.channel[channel_name].close()
+                    except Exception as e:
+                        print("RabbitMQ 频道 {} 关闭出错！".format(channel_name))
+                        print(str(e))
+                self.channel[channel_name] = None
+            self.channel = {}
+        # 关闭所有连接
         if (self.connection):
-            try:
-                self.connection.close()
-            except Exception as e:
-                r_logger.error("RabbitMQ 连接关闭出错!")
-                r_logger.error(e)
-            finally:
-                self.connection = None
+            for connection_name in self.connection.keys():
+                if (self.connection[connection_name]
+                        and self.connection[connection_name].is_open):
+                    try:
+                        self.connection[connection_name].close()
+                    except Exception as e:
+                        print("RabbitMQ 连接 {} 关闭出错!".format(connection_name))
+                        print(str(e))
+                self.connection[connection_name] = None
+            self.connection = {}
     
     """
     @description: 发布
@@ -120,17 +128,17 @@ class r_rabbitmq():
     """
     def publish(self, channel_name, queue, body):
         try:
+            if (type(body) == str):
+                body = json.loads(body)
             # 任务是否有 UUID，没有的话一定要赋予
-            if ("uuid" not in json.loads(body).keys()):
-                new_body = json.loads(body)
+            if ("uuid" not in body.keys()):
                 uuid = str(uuid.uuid1())
-                new_body["uuid"] = uuid
-                body = json.dumps(new_body)
+                body["uuid"] = uuid
             else:
-                uuid = json.loads(body)["uuid"]
+                uuid = body["uuid"]
             # 发布
             self.channel[channel_name].basic_publish(exchange="", \
-                routing_key=queue, body=body, \
+                routing_key=queue, body=json.dumps(body), \
                 # 消息持久化
                 properties=pika.BasicProperties(delivery_mode=2))
             return True, uuid
@@ -139,7 +147,7 @@ class r_rabbitmq():
                 "RabbitMQ 发布信息时出错，队列：{queue}，消息:{body}".format(
                     queue=queue, body=str(body)))
             r_logger.error(e)
-        return False, uuid
+        return False, None
 
     """
     @description: 获取（以 UUID 作为主键）
