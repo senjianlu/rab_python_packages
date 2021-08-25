@@ -24,6 +24,56 @@ r_logger = rab_logging.r_logger()
 
 
 """
+@description: 切换数据库装饰器
+-------
+@param:
+-------
+@return:
+"""
+def change_database(database):
+    def wrapper(func):
+        def _wrapper(*args, **kwargs):
+            func_result = None
+            # 需要切换数据库的连接
+            r_pgsql_drivers = {}
+            before_database = {}
+            # 获取入参的所有数据库连接
+            for i, arg in enumerate(args):
+                if (type(arg).__name__ == "r_pgsql_driver"):
+                    r_pgsql_drivers[str(i)] = arg
+                    before_database[str(i)] = arg.database
+            if (not r_pgsql_drivers):
+                r_logger.warn("{} 方法并未传入数据库连接对象！".format(
+                    str(func.__name__)))
+                # 运行方法
+                func_result = func(*args, **kwargs)
+            else:
+                # 所有连接均切换至目标数据库
+                for i in r_pgsql_drivers.keys():
+                    r_pgsql_driver = r_pgsql_drivers[i]
+                    r_logger.info(
+                        "{f_qname} {f_name} 方法 {i} 号数据库 {b_db} -> {db}！" \
+                            .format(f_qname=str(func.__qualname__),
+                                f_name=str(func.__name__),
+                                i=i, b_db=before_database[i], db=database))
+                    r_pgsql_driver.change_database(database)
+                # 运行方法
+                func_result = func(*args, **kwargs)
+                # 所有连接均切换回原数据库
+                for i in r_pgsql_drivers.keys():
+                    r_pgsql_driver = r_pgsql_drivers[i]
+                    r_logger.info(
+                        "{f_qname} {f_name} 方法 {i} 号数据库 {b_db} <- {db}！" \
+                            .format(f_qname=str(func.__qualname__),
+                                f_name=str(func.__name__),
+                                i=i, b_db=before_database[i], db=database))
+                    r_pgsql_driver.change_database(before_database[i])
+            return func_result
+        return _wrapper
+    return wrapper
+
+
+"""
 @description: 获取批量插入数值
 -------
 @param:
@@ -229,6 +279,29 @@ class r_pgsql_driver():
         self.close()
         self.connect()
     
+    """
+    @description: 切换数据库
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def change_database(self, database):
+        select_result = self.select("SELECT current_database();")
+        if (self.show_column_name):
+            current_database = select_result[0]["current_database"] 
+        else:
+            current_database = select_result[0][0]
+        r_logger.info("当前数据库：{current_database}，目标数据库：{database}" \
+            .format(current_database=current_database, database=database))
+        if (current_database.strip().lower() == database.strip().lower()):
+            r_logger.info("无需切换数据库！")
+        else:
+            self.close()
+            self.database = database
+            self.connect()
+            r_logger.info("已经切换至数据库 {}！".format(database))
+
     """
     @description: 查询语句
     -------

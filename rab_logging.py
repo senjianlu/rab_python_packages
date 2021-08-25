@@ -10,11 +10,10 @@
 
 
 import os
+import sys
 import logging
 from datetime import datetime
 from singleton_decorator import singleton
-# 切换路径到父级
-import sys
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_env
 from rab_python_packages import rab_config

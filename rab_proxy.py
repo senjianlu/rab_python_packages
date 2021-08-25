@@ -15,9 +15,9 @@ import requests
 import random
 import docker
 sys.path.append("..") if (".." not in sys.path) else True
-from rab_python_packages import rab_postgresql
 from rab_python_packages import rab_config
 from rab_python_packages import rab_requests
+from rab_python_packages import rab_postgresql
 from rab_python_packages import rab_logging
 
 
@@ -64,7 +64,9 @@ def get_personal_proxy_infos(location=None):
 -------
 @return:
 """
-def get_proxy_infos(location=None, level=None):
+@rab_postgresql.change_database(rab_config.load_package_config(
+    "rab_config.ini", "rab_proxy", "proxy_database"))
+def get_proxy_infos(r_pgsql_driver, location=None, level=None):
     # 代理信息存储
     proxy_infos = {
         "reverse": {},
@@ -73,11 +75,6 @@ def get_proxy_infos(location=None, level=None):
     }
     # 如果对代理等级无要求，则从数据库中搜索出其他代理
     if (not level or level < 10):
-        proxy_database = rab_config.load_package_config(
-            "rab_config.ini", "rab_proxy", "proxy_database")
-        # 数据库连接
-        r_pgsql_driver = rab_postgresql.r_pgsql_driver(
-            proxy_database, show_column_name=True)
         # 搜索所有代理
         select_sql = """
             SELECT
@@ -216,9 +213,11 @@ class r_proxy():
     -------
     @return:
     """
-    def __init__(self, location=None, level=None):
+    def __init__(self, r_pgsql_driver, location=None, level=None):
+        # 数据库连接
+        self.r_pgsql_driver = r_pgsql_driver
         # 所有代理信息
-        self.proxy_infos = get_proxy_infos(location, level)
+        self.proxy_infos = get_proxy_infos(r_pgsql_driver, location, level)
         # 各个网站中各个代理的访问次数
         self.ip_usage_counts = init_ip_usage_counts(self.proxy_infos)
     
@@ -346,4 +345,11 @@ class r_proxy():
 @return:
 """
 if __name__ == "__main__":
-    pass
+    r_pgsql_driver = rab_postgresql.r_pgsql_driver(show_column_name=True)
+    try:
+        print(get_proxy_infos(r_pgsql_driver))
+    except Exception as e:
+        r_logger.error("rab_proxy.py 单体测试出错！")
+        r_logger.error(e)
+    finally:
+        r_pgsql_driver.close()
