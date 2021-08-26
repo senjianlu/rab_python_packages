@@ -13,6 +13,7 @@ import sys
 import json
 import uuid
 import pika
+import time
 import requests
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
@@ -199,6 +200,39 @@ class r_rabbitmq():
             r_logger.error("RabbitMQ 获取队列长度时出错！")
             r_logger.error(e)
         return None, None, None
+    
+    """
+    @description: 判断队列是否为空
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def is_queue_empty(self, queue):
+        # 获取非缓存的准确队列长度
+        _ready = None
+        for _ in range(0, 10):
+            ready, unacknowledged, total = self.get_message_count(
+                "reptile_results")
+            if (ready >= 10):
+                break
+            elif(ready == 0):
+                break
+            else:
+                time.sleep(0.5)
+                r_logger.info("RabbitMQ 开始等待获取准确的队列长度......")
+            if (_ready == None):
+                _ready = ready
+                continue
+            elif(_ready == ready):
+                continue
+            else:
+                break
+        # 判断准备队列是否为空
+        if (ready == 0):
+            return True
+        else:
+            return False
 
 
 """
