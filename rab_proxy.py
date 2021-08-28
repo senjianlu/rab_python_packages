@@ -99,7 +99,7 @@ def get_proxy_infos(r_pgsql_driver, location=None, level=None):
                     1 = 1
                 UNION
                 SELECT
-                    sps_host AS host,
+                    sps_ip AS host,
                     sps_ip AS out_ip,
                     sps_location AS location,
                     sps_reverse_proxy_port AS reverse_proxy_port,
