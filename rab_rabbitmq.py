@@ -214,7 +214,7 @@ class r_rabbitmq():
         for _ in range(0, 10):
             ready, unacknowledged, total = self.get_message_count(
                 "reptile_results")
-            if (ready >= 10):
+            if (ready >= 100):
                 break
             elif(ready == 0):
                 break
