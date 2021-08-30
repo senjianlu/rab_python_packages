@@ -151,7 +151,7 @@ def get_run_timestamps(crontab_time_setting):
     for day in days:
         for hour in hours:
             for minute in minutes:
-                this_timestamp = get_last_whole_timestamp("month") \
+                this_timestamp = get_last_whole_timestamp(method="month") \
                     + day*86400 + hour*3600 + minute*60
                 run_timestamps.append(this_timestamp)
     return run_timestamps
@@ -184,7 +184,9 @@ class r_crontab():
     @return:
     """
     def add(self, task_name, crontab_time_setting):
-        self.task[task_name] = {"crontab_time_setting": crontab_time_setting}
+        self.task[task_name] = {
+            "crontab_time_setting": crontab_time_setting,
+            "run_timestamps": get_run_timestamps(crontab_time_setting)}
     
     """
     @description: 运行一次任务以记录时间戳
@@ -215,12 +217,40 @@ class r_crontab():
     @return:
     """
     def get_next_run_timestamp(self, task_name):
-        run_timestamps = get_run_timestamps(
-            self.task[task_name]["crontab_time_setting"])
-        for run_timestamp in run_timestamps:
+        for run_timestamp in self.task[task_name]["run_timestamps"]:
             if (run_timestamp > int(time.time())):
                 return run_timestamp
+        return None
     
+    """
+    @description: 到了运行的时间点
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def is_time_2_run(self, task_name):
+        # 如果曾经开始并结束过
+        if ("last_run_over_timestamp" in self.task[task_name].keys()
+                and self.task[task_name]["last_run_over_timestamp"]):
+            # 遍历所有需要运行的时间戳
+            for run_timestamp_index, run_timestamp in enumerate(
+                    self.task[task_name]["run_timestamps"]):
+                # 判断当前时间戳是否比上次运行时间点的下一次时间戳还要大
+                if ((self.task[task_name]["last_run_over_timestamp"] \
+                            > run_timestamp)
+                        and (self.task[task_name]["last_run_over_timestamp"] \
+                            < self.task[task_name]["run_timestamps"][(
+                                run_timestamp_index+1)])
+                        and (int(time.time()) >= self.task[task_name][
+                            "run_timestamps"][(run_timestamp_index+1)])):
+                    return True
+            # 时间戳循环结束返回 False
+            return False
+        # 未开始过则直接开始
+        else:
+            return True
+
     """
     @description: 等待下一次运行时间的到来
     -------
@@ -285,13 +315,12 @@ class r_crontab():
 """
 if __name__ == "__main__":
     r_crontab = r_crontab()
-    r_crontab.add("test", ["0", "0", "*", "*", "*"])
-    r_crontab.run("test")
-    r_crontab.over("test")
+    r_crontab.add("test", ["10", "*", "*", "*", "*"])
     # r_crontab.wait("test")
     while True:
         time.sleep(10)
-        print("是否到了新的分钟：{}".format(
-            str(r_crontab.is_new("test", "minute"))))
-        print("是否到了新的小时：{}".format(
-            str(r_crontab.is_new("test", "hour"))))
+        if (r_crontab.is_time_2_run("test")):
+            r_crontab.run("test")
+            print("run")
+            r_crontab.over("test")
+        print("wait next: {}".format(r_crontab.get_next_run_timestamp("test")))
