@@ -18,10 +18,11 @@ import base64
 import requests
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
-from rab_python_packages import rab_requests
 from rab_python_packages import rab_logging
 from rab_python_packages import rab_docker
+from rab_python_packages import rab_ip
 from rab_python_packages import rab_postgresql
+from rab_python_packages import rab_requests
 
 
 # 日志记录
@@ -685,7 +686,7 @@ class r_subscription():
     """
     def is_proxy_out_ip_used(self):
         # 获取这个节点的出口 IP 信息
-        self.proxy_info = rab_requests.get_ip_info(self.proxies)
+        self.proxy_info = rab_ip.get_ip_info(self.proxies)
         # 节点畅通
         if (self.proxy_info["ip"]):
             r_logger.info("当前节点出口 IP：{}".format(

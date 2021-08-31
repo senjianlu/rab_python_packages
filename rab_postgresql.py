@@ -14,9 +14,9 @@ import datetime
 import psycopg2
 import psycopg2.extras
 sys.path.append("..") if (".." not in sys.path) else True
-from rab_python_packages import rab_requests
-from rab_python_packages import rab_logging
 from rab_python_packages import rab_config
+from rab_python_packages import rab_logging
+from rab_python_packages import rab_ip
 
 
 # 日志记录
@@ -108,7 +108,7 @@ class r_pgsql_user():
         # 更新时间
         self.time = None
         # IP
-        self.ip = rab_requests.get_ip_info()["ip"] if not ip else ip
+        self.ip = rab_ip.get_ip_info()["ip"] if not ip else ip
     
     """
     @description: 获取用户

@@ -19,8 +19,9 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 sys.path.append("..") if (".." not in sys.path) else True
-from rab_python_packages import rab_logging
+
 from rab_python_packages import rab_config
+from rab_python_packages import rab_logging
 from rab_python_packages import rab_docker
 
 

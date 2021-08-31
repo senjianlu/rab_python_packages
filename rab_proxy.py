@@ -16,9 +16,9 @@ import random
 import docker
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
-from rab_python_packages import rab_requests
-from rab_python_packages import rab_postgresql
 from rab_python_packages import rab_logging
+from rab_python_packages import rab_ip
+from rab_python_packages import rab_postgresql
 
 
 # 日志记录
@@ -49,7 +49,7 @@ def get_personal_proxy_infos(location=None):
         }
         if (location):
             # 将代理转换并测试代理所在地区
-            ip_info = rab_requests.get_ip_info(
+            ip_info = rab_ip.get_ip_info(
                 parse_proxy_info(proxy_method, personal_proxy_info))
             if (ip_info["location"] == location):
                 personal_proxy_infos[proxy_method][out_ip] = personal_proxy_info
@@ -325,7 +325,7 @@ class r_proxy():
         for out_ip in random.sample(list(
                 self.proxy_infos[proxy_method].keys()), num_2_test):
             # 如果测试访问通过，记使用次数 1 次
-            if (rab_requests.test(test_url, proxies=parse_proxy_info(
+            if (rab_ip.test(test_url, proxies=parse_proxy_info(
                     proxy_method, self.proxy_infos[proxy_method][out_ip]))):
                 self.ip_usage_counts[web][out_ip] = 1
         # 最后如果测试完这个网站无可访问节点，则直接删除次数统计
