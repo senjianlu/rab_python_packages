@@ -13,9 +13,53 @@ import os
 import sys
 import json
 import configparser
-sys.path.append("..") if (".." not in sys.path) else True
-from rab_python_packages import rab_env
 
+
+"""
+@description: 查找包内文件
+-------
+@param:
+-------
+@return:
+"""
+def find_rab_file(rab_file_name):
+    paths = [
+        # 判断该路径下配置文件是否存在
+        None,
+        # 在项目主目录
+        "../",
+        # 不在的话就在共通包中查找
+        "rab_python_packages/",
+        # 或者在上级路径的共通包中查找
+        "../rab_python_packages/"
+    ]
+    for path in paths:
+        if (path):
+            if (os.path.exists(path+rab_file_name)):
+                return path + rab_file_name
+        else:
+            if (os.path.exists(rab_file_name)):
+                return rab_file_name
+
+"""
+@description: 查找包路径
+-------
+@param:
+-------
+@return:
+"""
+def find_rab_python_packages_path():
+    paths = [
+        None,
+        "../"
+    ]
+    for path in paths:
+        if (path):
+            if (os.path.exists(path+"rab_python_packages")):
+                return path
+        else:
+            if (os.path.exists("rab_python_packages")):
+                return path
 
 """
 @description: 获取所有配置信息
@@ -25,7 +69,7 @@ from rab_python_packages import rab_env
 @return: 
 """
 def get_config(file_name):
-    file_path = rab_env.find_rab_file(file_name)
+    file_path = find_rab_file(file_name)
     config = configparser.RawConfigParser()
     config.read(file_path, encoding="UTF-8")
     return config

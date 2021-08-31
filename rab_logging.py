@@ -15,7 +15,6 @@ import logging
 from datetime import datetime
 from singleton_decorator import singleton
 sys.path.append("..") if (".." not in sys.path) else True
-from rab_python_packages import rab_env
 from rab_python_packages import rab_config
 
 
@@ -34,7 +33,7 @@ def build_logger():
                         level=logging.INFO)
     logger = logging.getLogger("RAB_LOGGER")
     # 在 rab_python_packages 同级目录下创建 rab_logs 日志存放用文件夹
-    path = rab_env.find_rab_python_packages_path()
+    path = rab_config.find_rab_python_packages_path()
     # 判断是否存在现有的 rab_logs 日志存放用文件夹
     if (path):
         rab_logs_path = path + "rab_logs"
