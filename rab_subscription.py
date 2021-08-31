@@ -255,7 +255,11 @@ def get_subscription_origin_infos(subscription_urls):
         try:
             # 保险访问
             e_response = rab_requests.ensure_get(subscription_url)
-            subscription_origin_infos[subscription_url] = e_response.text
+            if (e_response):
+                subscription_origin_infos[subscription_url] = e_response.text
+            else:
+                r_logger.warn("{} 尝试所有自建代理仍无法获取订阅原始信息！".format(
+                    subscription_url))
         except Exception as e:
             r_logger.error("{} 不使用代理获取订阅原始信息出错！".format(
                 subscription_url))
