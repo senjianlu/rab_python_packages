@@ -250,7 +250,7 @@ def parse_trojan_node_url(node_url):
 -------
 @return:
 """
-def get_subscription_origin_infos(subscription_urls, r_requests=None, web=None):
+def get_subscription_origin_infos(subscription_urls):
     subscription_origin_infos = {}
     for subscription_url in subscription_urls:
         try:
@@ -262,15 +262,6 @@ def get_subscription_origin_infos(subscription_urls, r_requests=None, web=None):
             else:
                 r_logger.warn("{} 尝试所有自建代理仍无法获取订阅原始信息！".format(
                     subscription_url))
-            # 使用代理尝试访问
-            if (r_requests and web and web in subscription_url):
-                r_response = r_requests.get(web=web, url=subscription_url)
-                if (r_response):
-                    subscription_origin_infos[subscription_url] \
-                        = r_response.text
-                else:
-                    r_logger.warn("{} 尝试使用代理仍无法获取订阅原始信息！".format(
-                        subscription_url))
         except Exception as e:
             r_logger.error("{} 获取订阅原始信息出错！".format(
                 subscription_url))
