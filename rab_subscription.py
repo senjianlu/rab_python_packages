@@ -263,7 +263,7 @@ def get_subscription_origin_infos(subscription_urls, r_requests=None, web=None):
                 r_logger.warn("{} 尝试所有自建代理仍无法获取订阅原始信息！".format(
                     subscription_url))
             # 使用代理尝试访问
-            if (r_requests and web):
+            if (r_requests and web and web in subscription_url):
                 r_response = r_requests.get(web=web, url=subscription_url)
                 if (r_response):
                     subscription_origin_infos[subscription_url] \
