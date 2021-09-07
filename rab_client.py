@@ -88,7 +88,6 @@ class r_client():
             # 如果有需要 _format 的参数
             if (_format):
                 url = url.format(**_format)
-            print(url)
             # 参数增加
             if (self.action[name]["basic_params"]):
                 if (params):
@@ -98,7 +97,7 @@ class r_client():
             # 请求数据增加
             if (self.action[name]["basic_data"]):
                 # POST 字典类型
-                if (type(data) == dict):
+                if (data and type(data) == dict):
                     basic_data = self.action[name]["basic_data"]
                     basic_data.update(data)
                     data = basic_data
@@ -124,23 +123,22 @@ class r_client():
                     proxies=self.proxies)
             # PUT
             elif(self.action[name]["method"].upper() == "PUT"):
-                action_response = requests.request("PUT", url, \
+                action_response = requests.put(url, \
                     params=params, \
                     data=data, \
                     auth=self.auth, \
                     headers=self.headers, \
                     proxies=self.proxies)
-            # MKCOL
-            elif(self.action[name]["method"].upper() == "MKCOL"):
-                action_response = requests.request("MKCOL", url, \
-                    params=params, \
-                    data=data, \
-                    auth=self.auth, \
-                    headers=self.headers, \
-                    proxies=self.proxies)
+            # 不常用请求
             else:
-                r_logger.error("{name} 动作不支持 {method} 的操作方式！".format(
-                    name=name, method=self.action[name]["method"]))
+                action_response = requests.request(
+                    self.action[name]["method"].upper(), \
+                    url, \
+                    params=params, \
+                    data=data, \
+                    auth=self.auth, \
+                    headers=self.headers, \
+                    proxies=self.proxies)
         else:
             r_logger.error("{} 动作尚不存在！".format(name))
         return action_response
