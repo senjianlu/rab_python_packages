@@ -561,7 +561,6 @@ class r_storage():
             return False, None
         # 所有需要上传的存储源
         for origin in self.origins:
-            print(self.origins, to_file_path, local_file_path)
             result[origin.lower()] = {}
             # 文件路径检查未通过
             if (not origin_check[origin.lower()]["check_flg"]):
@@ -654,21 +653,23 @@ class r_storage():
             result[origin.lower()] = {}
             # 存储源是否已存在文件（其中有判断是否连接的过程）
             if (not origin_exist[origin.lower()]["is_exist"]):
-                result[origin.lower()]["is_exist"] = False
+                result[origin.lower()]["share_flg"] = False
                 result[origin.lower()]["share_url"] = None
                 continue
             # MinIO
             if (origin.lower() == "minio"):
-                share_url = minio_share(file_path, self.client[origin.lower()])
+                share_flg, share_url = minio_share(
+                    file_path, self.client[origin.lower()])
             # COS
             elif(origin.lower() == "cos"):
-                share_url = cos_share(file_path, self.client[origin.lower()])
+                share_flg, share_url = cos_share(
+                    file_path, self.client[origin.lower()])
             # Nextcloud
             elif(origin.lower() == "nextcloud"):
-                share_url = nextcloud_share(
+                share_flg, share_url = nextcloud_share(
                     file_path, self.client[origin.lower()])
             # 文件分享完成
-            result[origin.lower()]["is_exist"] = True
+            result[origin.lower()]["share_flg"] = share_flg
             result[origin.lower()]["share_url"] = share_url
         return result
 
