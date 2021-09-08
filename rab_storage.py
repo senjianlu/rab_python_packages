@@ -354,6 +354,8 @@ def nextcloud_upload(to_file_path, local_file_path, client):
         nextcloud_response = client.do_action("upload", \
             _format={"user": client.auth[0], "path": to_file_path}, \
             data=open(local_file_path, "rb"))
+        # 记录日志
+        r_logger.debug(nextcloud_response.text)
         return True, to_file_path
     except Exception as e:
         r_logger.error("Nextcloud 上传出错！")
@@ -408,6 +410,8 @@ def nextcloud_share(file_path, client):
     # 文件没有被分享过则新建分享
     nextcloud_response = client.do_action("create_share", \
         params={"path": file_path, "shareType": 3})
+    # 记录日志
+    r_logger.debug(nextcloud_response.text)
     return True, json.loads(
         nextcloud_response.content.decode("UTF-8"))["ocs"]["data"]["url"]
 
@@ -536,7 +540,6 @@ class r_storage():
             result[origin.lower()]["check_flg"] = check_flg
             result[origin.lower()]["file_path"] = _file_path
         return result
-
 
     """
     @description: 上传文件
