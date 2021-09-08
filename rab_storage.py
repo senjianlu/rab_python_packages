@@ -668,7 +668,7 @@ class r_storage():
                 share_url = nextcloud_share(
                     file_path, self.client[origin.lower()])
             # 文件分享完成
-            result[origin.lower()]["is_exist"] = False
+            result[origin.lower()]["is_exist"] = True
             result[origin.lower()]["share_url"] = share_url
         return result
 
@@ -691,8 +691,10 @@ if __name__ == "__main__":
     # print(r_storage.check("test/check_folder.png"))
     # 新建路径
     # print(r_storage.check("test/new/check_folder.png"))
-    # 上传图片
-    print(r_storage.upload("test/new/README.md", "README.md"))
-    print(r_storage.upload("test/new/new/README.md", "README.md"))
-    # 下载图片
+    # 上传文件
+    # print(r_storage.upload("test/new/README.md", "README.md"))
+    # print(r_storage.upload("test/new/new/README.md", "README.md"))
+    # 分享文件
+    print(r_storage.share("test/new/README.md"))
+    # 下载文件
     # print(r_storage.download("test/new/README.md", "README_new.md"))
