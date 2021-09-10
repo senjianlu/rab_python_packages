@@ -61,3 +61,14 @@ def fix(moudule_name=None):
         fix_rab_chrome_command = rab_config.load_package_config(
             "rab_linux_command.ini", "rab_env", "fix_rab_chrome")
         os.system(fix_rab_chrome_command)
+
+
+"""
+@description: 单体测试
+-------
+@param:
+-------
+@return:
+"""
+if __name__ == "__main__":
+    fix()
