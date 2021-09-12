@@ -282,7 +282,7 @@ def get_node_urls(subscription_origin_info):
     if (subscription_info):
         try:
             subscription_info = subscription_info.decode("UTF-8")
-        except Exception as r:
+        except Exception as e:
             r_logger.error("{} 订阅原始信息编码失败！".format(
                 str(subscription_info)))
             r_logger.error(e)
