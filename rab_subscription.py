@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# -*- coding:UTF-8 -*-
+# -*- coding:GBK -*-
 #
 # @AUTHOR: Rabbir
 # @FILE: /root/Github/rab_python_packages/rab_subscription.py
@@ -85,13 +85,13 @@ def get_param_value(param_key, url):
 def parse_ssr_node_url(node_url):
     node_info = node_url.replace("ssr://", "")
     try:
-        node_info = b64decode(node_info).decode("UTF-8")
+        node_info = b64decode(node_info).decode("GBK")
     except Exception:
         r_logger.error("SSR 原始信息 BASE64 解码失败：{}".format(node_info))
         return None
     node = {}
     node["name"] = b64decode(
-        node_info.split("/?")[1].split("&")[2].split("=")[1]).decode("UTF-8")
+        node_info.split("/?")[1].split("&")[2].split("=")[1]).decode("GBK")
     node["type"] = "ssr"
     # === SSR 基础信息 ===
     # 服务器 IP
@@ -102,22 +102,22 @@ def parse_ssr_node_url(node_url):
     node["cipher"] = node_info.split("/?")[0].split(":")[3]
         # 密码
     node["password"] = b64decode(
-        node_info.split("/?")[0].split(":")[5]).decode("UTF-8")
+        node_info.split("/?")[0].split(":")[5]).decode("GBK")
     # 协议
     node["protocol"] = node_info.split("/?")[0].split(":")[2]
     # 协议参数
     node["protocol-param"] = b64decode(
-        node_info.split("/?")[1].split("&")[1].split("=")[1]).decode("UTF-8")
+        node_info.split("/?")[1].split("&")[1].split("=")[1]).decode("GBK")
     # 混淆
     node["obfs"] = node_info.split("/?")[0].split(":")[4]
     node["obfs-param"] = b64decode(
-        node_info.split("/?")[1].split("&")[0].split("=")[1]).decode("UTF-8")
+        node_info.split("/?")[1].split("&")[0].split("=")[1]).decode("GBK")
     # 备注
     node["remarks"] = b64decode(
-        node_info.split("/?")[1].split("&")[2].split("=")[1]).decode("UTF-8")
+        node_info.split("/?")[1].split("&")[2].split("=")[1]).decode("GBK")
     # 分组
     node["group"] = b64decode(
-        node_info.split("/?")[1].split("&")[3].split("=")[1]).decode("UTF-8")
+        node_info.split("/?")[1].split("&")[3].split("=")[1]).decode("GBK")
     # UDP
     node["udp"] = "false"
     # 节点 ID
@@ -137,7 +137,7 @@ def parse_ss_node_url(node_url):
     # 部分解密
     node_info_4_b64decode = node_info.split("@")[0]
     try:
-        node_info_4_b64decode = b64decode(node_info_4_b64decode).decode("UTF-8")
+        node_info_4_b64decode = b64decode(node_info_4_b64decode).decode("GBK")
     except Exception:
         print("SS 原始信息 BASE64 解码失败：{}".format(node_info_4_b64decode))
         return None
@@ -173,7 +173,7 @@ def parse_ss_node_url(node_url):
 def parse_vmess_node_url(node_url):
     node_info = node_url.replace("vmess://", "")
     try:
-        node_info = b64decode(node_info).decode("UTF-8")
+        node_info = b64decode(node_info).decode("GBK")
         node_info = json.loads(node_info)
     except Exception:
         print("Vmess 原始信息 BASE64 解码失败：{}".format(node))
@@ -280,7 +280,7 @@ def get_node_urls(subscription_origin_info):
     subscription_info = b64decode(subscription_origin_info)
     # 存在防 CC 之类措施而导致获取原始信息失败
     if (subscription_info):
-        subscription_info = subscription_info.decode("UTF-8")
+        subscription_info = subscription_info.decode("GBK")
         for row in subscription_info.split("\n"):
             if (row.strip()):
                 node_urls.append(row.strip())
