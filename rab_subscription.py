@@ -255,7 +255,12 @@ def get_subscription_origin_infos(subscription_urls):
     for subscription_url in subscription_urls:
         try:
             # 保险访问
-            e_response = rab_requests.ensure_get(subscription_url)
+            headers = {
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " \
+                    + "AppleWebKit/535.36 (KHTML, like Gecko) " \
+                    + "Chrome/92.0.4515.131 Safari/537.36"
+            }
+            e_response = rab_requests.ensure_get(subscription_url, headers)
             if (e_response):
                 subscription_origin_infos[subscription_url] = e_response.text
                 continue

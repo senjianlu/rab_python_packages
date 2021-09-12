@@ -30,13 +30,14 @@ r_logger = rab_logging.r_logger()
 @return:
 """
 def ensure_get(url,
+               headers=None,
                timeout = int(rab_config.load_package_config(
                     "rab_config.ini", "rab_requests", "timeout")),
                success_status_codes=[200],
                error_status_codes=[500]):
     # 不适用代理的情况下访问
     try:
-        r = requests.get(url, timeout=timeout)
+        r = requests.get(url, timeout=timeout, headers=headers)
         if (r.status_code in success_status_codes):
             return r
     except Exception as e:
@@ -49,7 +50,8 @@ def ensure_get(url,
         proxies = rab_proxy.parse_proxy_info(
             "socks5", personal_proxy_infos["socks5"][proxy_out_ip])
         try:
-            r = requests.get(url, proxies=proxies, timeout=timeout)
+            r = requests.get(
+                url, proxies=proxies, headers=headers, timeout=timeout)
         except Exception as e:
             r_logger.info("在使用代理的情况下也无法访问：{url}！错误信息：{e}" \
                 .format(url=url, e=str(e)))
