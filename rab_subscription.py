@@ -286,7 +286,7 @@ def get_node_urls(subscription_origin_info):
             r_logger.error("{} 订阅原始信息编码失败！".format(
                 str(subscription_info)))
             r_logger.error(e)
-            continue
+            return node_urls
         for row in subscription_info.split("\n"):
             if (row.strip()):
                 node_urls.append(row.strip())
