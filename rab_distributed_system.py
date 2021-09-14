@@ -95,7 +95,6 @@ class status():
     -------
     @return:
     """
-    @rab_postgresql.change_database("stapi")
     def update(self, r_pgsql_driver):
         update_sql = """
         INSERT INTO
@@ -142,7 +141,6 @@ class status():
     -------
     @return:
     """
-    @rab_postgresql.change_database("stapi")
     def save(self, r_pgsql_driver):
         update_sql = """
             UPDATE
