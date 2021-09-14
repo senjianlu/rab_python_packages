@@ -61,7 +61,7 @@ def get_node_delay_time():
 -------
 @return:
 """
-class status():
+class r_status():
 
     """
     @description: 初始化
@@ -231,7 +231,7 @@ if __name__ == "__main__":
 
     r_pgsql_driver = rab_postgresql.r_pgsql_driver()
     try:
-        r_status = status("test_project", "test_subproject", "test_module")
+        r_status = r_status("test_project", "test_subproject", "test_module")
         r_status.start(r_pgsql_driver, function="test_function")
         time.sleep(10)
         r_status.over("test_result", r_pgsql_driver, function="test_function")
