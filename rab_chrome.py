@@ -140,7 +140,7 @@ class r_chrome():
         # 使用的代理
         self.proxy = proxy
         # 需要验证代理转发时所用的本地端口
-        self.local_proxy_port = 1080
+        self.local_proxy_port = local_proxy_port
         # 需要验证代理转发用 GOST
         self.gost_container = None
         # 操作系统
