@@ -19,6 +19,7 @@
 
 | 模块 | 版本 |
 | -----| ---- |  
+| cfscrape | 2.1.1 |  
 | configparser | 5.0.2 |  
 | charset-normalizer | 2.0.3 |  
 | docker | 5.0.0 |  
@@ -31,6 +32,7 @@
 | singleton_decorator | 1.0.0 |  
 | six | 1.16.0 |  
 | urllib3 | 1.25.11 |  
+| websocket | 0.2.1 |  
 
 ## 使用方法 
 仅使用当前版本（维持爬虫的稳定可用）:
