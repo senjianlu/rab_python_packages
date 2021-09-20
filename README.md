@@ -44,7 +44,7 @@ git submodule add https://github.com/senjianlu/rab_python_packages.git
 *注：既存方法的方法名和参数不进行修改，实在需要添加参数会赋予初始值，任何改动以不影响现在的代码作为第一前提。*  
 
 ## 整体结构
-![rab_python_packages](https://raw.githubusercontent.com/senjianlu/imgs/master/20210914085755.png)
+![rab_python_packages](https://raw.githubusercontent.com/senjianlu/imgs/master/20210920190810.png)
 
 ## 特别鸣谢
 - 感谢 [JetBrains](https://www.jetbrains.com/) 为本项目提供的 [PyCharm](https://www.jetbrains.com/pycharm/) 开源许可证
