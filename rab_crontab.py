@@ -100,7 +100,7 @@ def parse_crontab_time_setting(crontab_time_setting):
     # 获取需要定时执行的小时数
     hours = []
     if (hour != "*"):
-        # 单个分钟
+        # 单个小时
         if (hour.isdigit()):
             hours = [int(hour)]
         # 手动设定多个
@@ -114,13 +114,13 @@ def parse_crontab_time_setting(crontab_time_setting):
                     hours.append(int(h))
     else:
         hours = list(range(0, 24))
-    # 获取需要定时执行的天数（以月为单位）
+    # 获取需要定时执行的天数（以月为单位，并且会拓展到下个月 1 日 24 点）
     day = day_of_month
     days = []
     week, days_num = calendar.monthrange(
         datetime.datetime.now().year, datetime.datetime.now().month)
     if (day != "*"):
-        # 单个分钟
+        # 单个日期
         if (day.isdigit()):
             days = [int(day)]
         # 手动设定多个
@@ -129,11 +129,14 @@ def parse_crontab_time_setting(crontab_time_setting):
                 days.append(int(d))
         # 每隔固定时间执行
         elif("/" in day):
+            # 每月 1 日必定符合
+            days.append(0)
+            # 循环剩余日期
             for d in range(1, days_num+1):
                 if (d%int(day.split("/")[1]) == 0):
                     days.append(int(d))
     else:
-        days = list(range(1, days_num+1))
+        days = list(range(0, days_num+1))
     return minutes, hours, days
 
 """
@@ -189,6 +192,17 @@ class r_crontab():
             "run_timestamps": get_run_timestamps(crontab_time_setting)}
     
     """
+    @description: 续约任务
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def renew(self, task_name):
+        self.task[task_name]["run_timestamps"] = get_run_timestamps(
+            self.task[task_name]["crontab_time_setting"])
+    
+    """
     @description: 运行一次任务以记录时间戳
     -------
     @param:
@@ -208,6 +222,13 @@ class r_crontab():
     """
     def over(self, task_name):
         self.task[task_name]["last_run_over_timestamp"] = int(time.time())
+        # 如果接下来剩下少于一个可用的时间戳则进行续约
+        available_run_timestamps = []
+        for run_timestamp in self.task[task_name]["run_timestamps"]:
+            if (run_timestamp >= int(time.time())):
+                available_run_timestamps.append(run_timestamp)
+        if (len(available_run_timestamps) <= 1):
+            self.renew(task_name)
 
     """
     @description: 获取下一次运行的时间戳
@@ -238,7 +259,7 @@ class r_crontab():
                     self.task[task_name]["run_timestamps"]):
                 # 判断当前时间戳是否比上次运行时间点的下一次时间戳还要大
                 if ((self.task[task_name]["last_run_over_timestamp"] \
-                            > run_timestamp)
+                            >= run_timestamp)
                         and (self.task[task_name]["last_run_over_timestamp"] \
                             < self.task[task_name]["run_timestamps"][(
                                 run_timestamp_index+1)])
@@ -315,12 +336,15 @@ class r_crontab():
 """
 if __name__ == "__main__":
     r_crontab = r_crontab()
-    r_crontab.add("test", ["10", "*", "*", "*", "*"])
+    r_crontab.add("test", ["*/3", "*", "*", "*", "*"])
+    print(len(r_crontab.task["test"]["run_timestamps"]))
     # r_crontab.wait("test")
-    while True:
-        time.sleep(10)
-        if (r_crontab.is_time_2_run("test")):
-            r_crontab.run("test")
-            print("run")
-            r_crontab.over("test")
-        print("wait next: {}".format(r_crontab.get_next_run_timestamp("test")))
+
+    # 测试到点执行
+    # while True:
+    #     time.sleep(10)
+    #     if (r_crontab.is_time_2_run("test")):
+    #         r_crontab.run("test")
+    #         print("run")
+    #         r_crontab.over("test")
+    #     print("wait next: {}".format(r_crontab.get_next_run_timestamp("test")))
