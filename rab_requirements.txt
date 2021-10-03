@@ -11,4 +11,4 @@ selenium==3.141.0
 singleton_decorator==1.0.0
 six==1.16.0
 urllib3==1.25.11
-websocket=0.2.1
+websocket==0.2.1
