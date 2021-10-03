@@ -21,3 +21,7 @@ RUN git clone https://github.com/senjianlu/rab_python_packages.git
 WORKDIR /root/GitHub/rab_python_packages
 RUN python3 rab_env.py
 RUN python3 rab_env.py rab_chrome
+
+# 删除无用文件
+RUN rm -r chromedriver_linux64.zip
+RUN rm -r google-chrome-stable_current_x86_64.rpm

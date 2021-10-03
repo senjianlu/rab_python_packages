@@ -5,6 +5,7 @@
 在大量简单方法整合起来的模块加持下，即使是初学者也能迅速开展对数据的爬取、整理和存储等工作。  
 
 ## 环境
+环境需求：  
 | 系统 | 版本 |  
 | -----| ---- |  
 | Linux | CentOS7 |  
@@ -33,6 +34,26 @@
 | six | 1.16.0 |  
 | urllib3 | 1.25.11 |  
 | websocket | 0.2.1 |  
+
+**你有以下三种方式来配置环境：**
+1. 使用命令配置本机环境：
+```bash
+cd rab_python_packages
+# 配置运行环境
+python3 rab_env.py
+# 针对 rab_chrome 配置 Selenium 驱动 Chrome 所需的环境
+python3 rab_env.py rab_chrome
+```
+2. 从 Docker Hub 上拉取我配置好环境的镜像：
+```bash
+docker pull rabbir/rab_python_packages:latest
+```
+3. 使用 Dockerfile 构建 Docker 镜像：
+```bash
+cd rab_python_packages
+# rab_python_packages:latest 替换为你想要的标签
+docker build -t rab_python_packages:latest .
+```
 
 ## 使用方法 
 仅使用当前版本（维持爬虫的稳定可用）:
