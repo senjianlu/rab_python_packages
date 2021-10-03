@@ -38,7 +38,7 @@ def fix_env_by_yum():
 """
 def fix_env_by_pip():
     file_name = "rab_requirements.txt"
-    file_path = find_rab_file(file_name)
+    file_path = rab_config.find_rab_file(file_name)
     print("pip 开始从文件 " + file_path + " 开始安装！")
     command = "pip3 install -r " + file_path
     os.system(command)
@@ -71,4 +71,8 @@ def fix(moudule_name=None):
 @return:
 """
 if __name__ == "__main__":
-    fix()
+    # 指定安装某个模块的环境
+    if (len(sys.argv) > 1):
+        fix(sys.argv[1])
+    else:
+        fix()
