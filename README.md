@@ -35,6 +35,14 @@
 | urllib3 | 1.25.11 |  
 | websocket | 0.2.1 |  
 
+| 浏览器 | 版本 |  
+| ----- | ----- |  
+| Google Chrome | 92.0.4515.107 |  
+
+| 浏览器驱动 | 版本 |  
+| ----- | ----- |  
+| ChromeDriver | 92.0.4515.107 |  
+
 **你有以下三种方式来配置环境：**
 1. 使用命令配置本机环境：
 ```bash
@@ -44,11 +52,11 @@ python3 rab_env.py
 # 针对 rab_chrome 配置 Selenium 驱动 Chrome 所需的环境
 python3 rab_env.py rab_chrome
 ```
-2. 从 Docker Hub 上拉取我配置好环境的镜像：
+2. 从 Docker Hub 上拉取我配置好环境的镜像（仓库链接：[rabbir/rab_python_packages](https://hub.docker.com/r/rabbir/rab_python_packages)）：
 ```bash
 docker pull rabbir/rab_python_packages:latest
 ```
-3. 使用 Dockerfile 构建 Docker 镜像：
+3. 使用 Dockerfile 构建本地 Docker 镜像：
 ```bash
 cd rab_python_packages
 # rab_python_packages:latest 替换为你想要的标签
