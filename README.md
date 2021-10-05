@@ -52,7 +52,7 @@ python3 rab_env.py
 # 针对 rab_chrome 配置 Selenium 驱动 Chrome 所需的环境
 python3 rab_env.py rab_chrome
 ```
-2. 从 Docker Hub 上拉取我配置好环境的镜像（仓库链接：[rabbir/rab_python_packages](https://hub.docker.com/r/rabbir/rab_python_packages)）：
+2. 从 Docker Hub 上拉取 [rabbir/rab_python_packages](https://hub.docker.com/r/rabbir/rab_python_packages)：  
 ```bash
 docker pull rabbir/rab_python_packages:latest
 ```

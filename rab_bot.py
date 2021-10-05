@@ -27,7 +27,7 @@ def test_connect_and_proxy(proxy):
     try:
         result = requests.get("http://ip-api.com/json/?lang=zh-CN")
         country = json.loads(result.text)["country"]
-        if (country == "中国" or country.lower() == "china"):
+        if ("中国" in country or "china" in country.lower()):
             try:
                 result = requests.get("https://core.telegram.org/bots",
                                       proxies=proxy,
