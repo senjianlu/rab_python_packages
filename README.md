@@ -43,7 +43,7 @@
 | ----- | ----- |  
 | ChromeDriver | 92.0.4515.107 |  
 
-**你有以下三种方式来配置环境：**
+**你有以下两种方式来配置环境：**
 1. 使用命令配置本机环境：
 ```bash
 cd rab_python_packages
@@ -52,19 +52,23 @@ python3 rab_env.py
 # 针对 rab_chrome 配置 Selenium 驱动 Chrome 所需的环境
 python3 rab_env.py rab_chrome
 ```
-2. 从 Docker Hub 上拉取 [rabbir/rab_python_packages](https://hub.docker.com/r/rabbir/rab_python_packages)：  
+2. 如果你习惯在 Docker 镜像内进行开发作业，那么也可以从 Docker Hub 上拉取已经配置好环境的  [rabbir/rab_python_packages](https://hub.docker.com/r/rabbir/rab_python_packages) 镜像并连接：
 ```bash
 docker pull rabbir/rab_python_packages:latest
+# 后台运行容器
+docker run -dit rabbir/rab_python_packages:latest
+# 连接镜像为 rabbir/rab_python_packages:latest 的第一个容器
+docker attach `docker ps -aq -l --filter ancestor=rabbir/rab_python_packages:latest`
 ```
-3. 使用 Dockerfile 构建本地 Docker 镜像：
-```bash
-cd rab_python_packages
-# rab_python_packages:latest 替换为你想要的标签
-docker build -t rab_python_packages:latest .
-```
+> 你也可以选择在本地构建 Docker 镜像，使用本项目中的 Dockerfile 以保证在构建过程中环境会一并被配置好：
+> ```bash
+> cd rab_python_packages
+> # rabbir/rab_python_packages:latest 替换为你想要的标签
+> docker build -t rabbir/rab_python_packages:latest .
+> ```
 
-## 使用方法 
-仅使用当前版本（维持爬虫的稳定可用）:
+## 使用方法  
+仅使用当前版本（维持爬虫的稳定可用）:  
 ```bash
 git clone https://github.com/senjianlu/rab_python_packages.git
 ```
@@ -73,6 +77,13 @@ git clone https://github.com/senjianlu/rab_python_packages.git
 git submodule add https://github.com/senjianlu/rab_python_packages.git
 ```
 *注：既存方法的方法名和参数不进行修改，实在需要添加参数会赋予初始值，任何改动以不影响现在的代码作为第一前提。*  
+Dockerfile 构建镜像：
+```yaml
+# 基础镜像系统版本为 rabbir/rab_python_packages:latest
+FROM rabbir/rab_python_packages:latest
+...
+...
+```
 
 ## 整体结构
 ![rab_python_packages](https://raw.githubusercontent.com/senjianlu/imgs/master/20210920190810.png)

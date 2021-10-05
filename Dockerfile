@@ -14,11 +14,12 @@ RUN curl -s https://gitee.com/senjianlu/one-click-scripts/raw/main/CentOS7%20%E4
 
 # 在 /root/GitHub 目录下克隆 rab_python_packages 项目
 RUN mkdir /root/GitHub
-WORKDIR /root/GitHub
-RUN git clone https://github.com/senjianlu/rab_python_packages.git
+RUN mkdir /root/GitHub/rab_python_packages
+WORKDIR /root/GitHub/rab_python_packages
+# 将宿主机当前目录下的所有文件拷贝至镜像内的 /root/GitHub/rab_python_packages 文件夹中
+COPY . .
 
 # 配置环境
-WORKDIR /root/GitHub/rab_python_packages
 RUN python3 rab_env.py
 RUN python3 rab_env.py rab_chrome
 
