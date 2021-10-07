@@ -13,7 +13,6 @@ import re
 import os
 import sys
 import time
-import docker
 import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -21,7 +20,6 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 from rab_python_packages import rab_logging
-from rab_python_packages import rab_docker
 
 
 # 日志记录
@@ -63,53 +61,29 @@ def construct_chrome(port):
         r_logger.error(e)
 
 """
-@description: 新建 GOST 容器
+@description: 关闭 GOST
 -------
 @param:
 -------
 @return:
 """
-def create_gost_container(local_proxy_port):
-    # 删除残余的容器并新建
-    container_name = "proxy_port_{}".format(str(local_proxy_port))
-    # 关闭和删除旧容器
-    old_containers = rab_docker.get_containers(
-        name_keyword=container_name)
-    if (old_containers):
-        for old_container in old_containers:
-            old_container.stop()
-            old_container.remove()
-    # 获取镜像名和版本
-    image = rab_config.load_package_config(
-        "rab_config.ini", "rab_proxy", "gost_image")
-    gost_container = docker.from_env().containers.run(
-        image=image,
-        name=container_name,
-        command="/bin/bash",
-        # 将 Docker 的 1081 端口映射到本地指定的代理用端口上
-        ports={"1081/tcp": local_proxy_port},
-        tty=True,
-        detach=True)
-    return gost_container
-
-"""
-@description: 修改 GOST 容器配置
--------
-@param:
--------
-@return:
-"""
-def configure_gost(gost_container, proxy):
-    # GOST 关闭命令
+def gost_stop():
     gost_stop_command = rab_config.load_package_config(
         "rab_linux_command.ini", "rab_chrome", "gost_stop")
-    # 拼接代理至 GOST 启动命令
+    os.system(gost_stop_command)
+
+"""
+@description: 开启 GOST
+-------
+@param:
+-------
+@return:
+"""
+def gost_start(local_proxy_port, proxy):
     gost_start_command = rab_config.load_package_config(
         "rab_linux_command.ini", "rab_chrome", "gost_start").replace(
-            "{proxy}", proxy)
-    # 重启 GOST
-    gost_container.exec_run(gost_stop_command)
-    gost_container.exec_run(gost_start_command)
+            "{port}", str(local_proxy_port)).replace("{proxy}", proxy)
+    os.system(gost_start_command)
 
 
 """
@@ -142,7 +116,7 @@ class r_chrome():
         # 需要验证代理转发时所用的本地端口
         self.local_proxy_port = local_proxy_port
         # 需要验证代理转发用 GOST
-        self.gost_container = None
+        self.is_gost_used = False
         # 操作系统
         self.system = get_system_type()
     
@@ -185,18 +159,16 @@ class r_chrome():
             if(self.proxy):
                 # 如果需要验证的话
                 if ("@" in self.proxy):
-                    # 如果当前没有 GOST 容器的话新起一个
-                    if (not self.gost_container):
-                        self.gost_container = create_gost_container(
-                            self.local_proxy_port)
-                    # 更改 GOST 的代理转发信息
-                    configure_gost(self.gost_container, self.proxy)
+                    # 通过 GOST 转发
+                    gost_stop()
+                    gost_start(self.local_proxy_port, self.proxy)
                     # 本地代理信息
                     proxy = "socks5://127.0.0.1:{}".format(
                         str(self.local_proxy_port))
+                    self.is_gost_used = True
                 # 如果不需要验证的话
                 else:
-                    pass
+                    proxy = self.proxy
                 # 浏览器代理的配置
                 chrome_options.add_argument(
                     "--proxy-server={}".format(proxy))
@@ -255,10 +227,9 @@ class r_chrome():
     @return:
     """
     def close(self):
-        # 关闭 GOST 容器
-        if (self.gost_container):
-            self.gost_container.stop()
-            self.gost_container = None
+        # 关闭 GOST
+        if (self.is_gost_used):
+            gost_stop()
         # Windows 系统
         if (self.system == "windows"):
             r_logger.info("Windows 系统下开始关闭 Chrome......")

@@ -61,6 +61,16 @@ def fix(moudule_name=None):
         fix_rab_chrome_command = rab_config.load_package_config(
             "rab_linux_command.ini", "rab_env", "fix_rab_chrome")
         os.system(fix_rab_chrome_command)
+        # 安装 GOST 并下载启动和停止脚本
+        fix_rab_chrome_gost_command = rab_config.load_package_config(
+            "rab_linux_command.ini", "rab_env", "fix_rab_chrome_gost")
+        os.system(fix_rab_chrome_gost_command)
+        fix_rab_chrome_gost_start_command = rab_config.load_package_config(
+            "rab_linux_command.ini", "rab_env", "fix_rab_chrome_gost_start")
+        os.system(fix_rab_chrome_gost_start_command)
+        fix_rab_chrome_gost_stop_command = rab_config.load_package_config(
+            "rab_linux_command.ini", "rab_env", "fix_rab_chrome_gost_stop")
+        os.system(fix_rab_chrome_gost_stop_command)
 
 
 """
