@@ -260,7 +260,8 @@ def get_subscription_origin_infos(subscription_urls):
                     + "AppleWebKit/535.36 (KHTML, like Gecko) " \
                     + "Chrome/92.0.4515.131 Safari/537.36"
             }
-            e_response = rab_requests.ensure_get(subscription_url, headers)
+            e_response = rab_requests.ensure_request(
+                "GET", subscription_url, headers=headers)
             if (e_response):
                 subscription_origin_infos[subscription_url] = e_response.text
                 continue
