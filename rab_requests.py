@@ -56,6 +56,8 @@ def ensure_request(method,
         try:
             r = requests.request(method.upper(), url, params=params, \
                 data=data, headers=headers, proxies=proxies, timeout=timeout)
+            if (r.status_code in success_status_codes):
+                return r
         except Exception as e:
             r_logger.info("在使用代理的情况下也无法访问：{url}！错误信息：{e}" \
                 .format(url=url, e=str(e)))
@@ -181,5 +183,10 @@ class r_requests():
 @return:
 """
 if __name__ == "__main__":
-    print(get_ip_info())
+    personal_proxy_infos = rab_proxy.get_personal_proxy_infos()
+    print(personal_proxy_infos)
+    for proxy_out_ip in personal_proxy_infos["socks5"]:
+        print(proxy_out_ip)
+        print(rab_proxy.parse_proxy_info(
+            "socks5", personal_proxy_infos["socks5"][proxy_out_ip]))
     pass
