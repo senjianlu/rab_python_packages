@@ -13,35 +13,12 @@ import sys
 import json
 import requests
 sys.path.append("..") if (".." not in sys.path) else True
+from rab_python_packages import rab_config
 from rab_python_packages import rab_logging
 
 
-"""
-@description: 测试是否能连接 Telegram 服务器或者代理是否可用
--------
-@param:
--------
-@return:
-"""
-def test_connect_and_proxy(proxy):
-    try:
-        result = requests.get("http://ip-api.com/json/?lang=zh-CN")
-        country = json.loads(result.text)["country"]
-        if ("中国" in country or "china" in country.lower()):
-            try:
-                result = requests.get("https://core.telegram.org/bots",
-                                      proxies=proxy,
-                                      timeout=5)
-                if (result.status_code == 200):
-                    return True, proxy
-                else:
-                    return False, None
-            except Exception:
-                return False, None
-        else:
-            return True, None
-    except Exception:
-        return False, None
+# 日志记录
+r_logger = rab_logging.r_logger()
 
 
 """
@@ -60,13 +37,72 @@ class r_bot:
     -------
     @return:
     """
-    def __init__(self, token, proxy=None):
+    def __init__(self,
+                 proxies=None,
+                 token=rab_config.load_package_config(
+                     "rab_config.ini", "rab_bot", "telegram_token")):
         self.token = token
         self.url = "https://api.telegram.org/bot" + self.token
-        # 字典 {chat_id<str>: last_message_id<int>}
+        self.proxies = proxies
+        self.is_connected = False
+        # 测试连接
+        self.test()
+        # 存放收到各用户最后一条消息的 message_id
         self.chat_id_last_message_id = {}
-        self.connect_flg, self.proxy = test_connect_and_proxy(proxy)
     
+    """
+    @description: 测试对 Telegram 的访问
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def test(self):
+        # 先尝试不使用代理或使用传入代理进行访问测试
+        try:
+            result = requests.get("https://core.telegram.org/bots",
+                proxies=self.proxies, timeout=5)
+            if (result.status_code == 200):
+                self.is_connected = True
+                r_logger.info("Telegram Bot 使用代理 {} 访问测试成功！".format(
+                    str(self.proxies)))
+            else:
+                self.is_connected = False
+                r_logger.error("Telegram Bot 使用代理 {} 访问测试失败！".format(
+                    str(self.proxies)))
+        except Exception:
+            self.is_connected = False
+            r_logger.error("Telegram Bot 使用代理 {} 访问测试出错！".format(
+                str(self.proxies)))
+            r_logger.error(e)
+        # 如果不能连接则尝试配置文件中的代理
+        if (not self.is_connected):
+            r_logger.info("Telegram Bot 开始尝试配置文件中的代理......")
+            for proxy in rab_config.load_package_config(
+                    "rab_config.ini", "common", "proxy"):
+                try:
+                    proxies = {
+                        "http": proxy,
+                        "https": proxy
+                    }
+                    result = requests.get("https://core.telegram.org/bots",
+                        proxies=proxies, timeout=5)
+                    if (result.status_code == 200):
+                        self.proxies = proxies
+                        self.is_connected = True
+                        r_logger.info("Telegram Bot 开始使用代理：{}".format(
+                            str(proxies)))
+                        break
+                    else:
+                        r_logger.error("Telegram Bot 无法使用代理：{}".format(
+                            str(proxies)))
+                except Exception as e:
+                    r_logger.error("Telegram Bot 尝试代理 {} 出错！".format(
+                        str(proxies)))
+                    r_logger.error(e)
+            r_logger.error("Telegram Bot 尝试所有配置文件中的代理均无法访问！")
+
+
     """
     @description: 获取最新的聊天记录
     -------
@@ -76,41 +112,39 @@ class r_bot:
     """
     def get_latest_messages(self):
         # 判断是否能连接 Telegram 服务器
-        if (self.connect_flg):
-            # 获取最新的聊天记录的链接
+        if (self.is_connected):
+            # 获取聊天记录的 API 地址
             get_updates_url = self.url + "/getUpdates"
             try:
-                # 如果有代理则使用代理访问
-                if (self.proxy):
-                    r = requests.get(get_updates_url,
-                                     proxies=self.proxy,
-                                     verify=False)
-                else:
-                    r = requests.get(get_updates_url)
-                result = json.loads(r.text)
+                response = requests.get(get_updates_url, proxies=self.proxies,
+                    verify=False)
+                messages = json.loads(response.text)
                 # 继上次获取后的新信息列表
                 latest_messages = []
-                for message in result["result"]:
-                    # 获取用户 ID
-                    # from_id = message["message"]["from"]["id"]
+                for message in messages["result"]:
                     # 获取 CHAT ID
                     chat_id = message["message"]["chat"]["id"]
-                    # 如果第一次获取这个对话消息
-                    #     或者 message_id 比既存的还要大，即为新的信息
+                    # 如果第一次收到信息，或 message_id 比既存的还要大
                     if (chat_id not in self.chat_id_last_message_id.keys() 
                             or (message["message"]["message_id"] 
                                 > self.chat_id_last_message_id[chat_id])):
+                        # 时间较早的在队列前面
                         latest_messages.append(message)
                         self.chat_id_last_message_id[chat_id] \
                             = message["message"]["message_id"]
-                # 如果有最新的消息
-                result["result"] = latest_messages
+                # 将新消息替换响应中消息列表
+                messages["result"] = latest_messages
                 if (len(latest_messages) > 0):
-                    return result
+                    return {
+                        "ok": True,
+                        "result":latest_messages,
+                        "description": "共 {} 条新消息！".format(
+                            len(latest_messages))
+                    }
                 else:
-                    return {"ok": False, "description": "暂无新消息！"}
+                    return {"ok": True, "result":[], "description": "无新消息！"}
             except Exception as e:
-                return {"ok": False, "description": str(e)}
+                return {"ok": False, "description": "出错：{}".format(str(e))}
         else:
             return {"ok": False, "description": "无法连接到 Telegram 服务器！"}
     
@@ -121,27 +155,24 @@ class r_bot:
     -------
     @return:
     """
-    def send_message(self, chat_id, message):
+    def send_message(self,
+                     message,
+                     chat_id=rab_config.load_package_config(
+                         "rab_config.ini", "rab_bot", "telegram_chat_id")):
         # 判断是否能连接 Telegram 服务器
-        if (self.connect_flg):
-            # 发送信息的链接
+        if (self.is_connected):
+            # 发送聊天信息的 API 地址
             send_message_url = self.url + "/sendMessage"
-            params = {
+            data = {
                 "chat_id": chat_id,
                 "text": message
             }
             try:
-                # 如果有代理则使用代理访问
-                if (self.proxy):
-                    r = requests.post(send_message_url,
-                                      params=params,
-                                      proxies=self.proxy,
-                                      verify=False)
-                else:
-                    r = requests.post(send_message_url, params=params)
-                return json.loads(r.text)
+                response = requests.post(send_message_url, data=data, \
+                    proxies=self.proxies, verify=False)
+                return json.loads(response.text)
             except Exception as e:
-                return {"ok": False, "description": str(e)}
+                return {"ok": False, "description": "出错：{}".format(str(e))}
         else:
             return {"ok": False, "description": "无法连接到 Telegram 服务器！"}
 
@@ -154,5 +185,6 @@ class r_bot:
 @return:
 """
 if __name__ == "__main__":
-    # todo...
-    print(test_connect_and_proxy(None))
+    r_bot = r_bot()
+    print(r_bot.get_latest_messages())
+    print(r_bot.send_message("test"))
