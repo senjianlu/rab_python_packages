@@ -27,8 +27,9 @@
 | minio | 7.1.0 |  
 | pika | 1.2.0 |  
 | psycopg2 | 2.8.6 |  
-| rsa | 4.7.2 |  
+| redis | 3.5.3 |  
 | requests[socks] | 2.10.0 |  
+| rsa | 4.7.2 |  
 | selenium | 3.141.0 |  
 | singleton_decorator | 1.0.0 |  
 | six | 1.16.0 |  

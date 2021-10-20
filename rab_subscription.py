@@ -139,7 +139,8 @@ def parse_ss_node_url(node_url):
     try:
         node_info_4_b64decode = b64decode(node_info_4_b64decode).decode("UTF-8")
     except Exception:
-        print("SS 原始信息 BASE64 解码失败：{}".format(node_info_4_b64decode))
+        r_logger.error("SS 原始信息 BASE64 解码失败：{}".format(
+            node_info_4_b64decode))
         return None
     node = {}
     node["name"] = urllib.parse.unquote(node_info.split("@")[1].split("#")[1])
@@ -176,7 +177,7 @@ def parse_vmess_node_url(node_url):
         node_info = b64decode(node_info).decode("UTF-8")
         node_info = json.loads(node_info)
     except Exception:
-        print("Vmess 原始信息 BASE64 解码失败：{}".format(node))
+        r_logger.error("Vmess 原始信息 BASE64 解码失败：{}".format(str(node_info)))
         return None
     node = {}
     node["name"] = u"{}".format(node_info["ps"])

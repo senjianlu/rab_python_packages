@@ -71,11 +71,12 @@ class r_rabbitmq():
         try:
             self.connection[connection_name] = pika.BlockingConnection(
                 pika.ConnectionParameters(self.host, int(self.port), "/", auth))
+            return True
         except Exception as e:
-            print("RabbitMQ 建立连接 {} 时出错！".format(connection_name))
-            print(str(e))
+            r_logger.error(
+                "RabbitMQ 建立连接 {} 时出错！".format(connection_name))
+            r_logger.error(e)
             return False
-        return True
     
     """
     @description: 建立频道
@@ -89,7 +90,7 @@ class r_rabbitmq():
             self.channel[channel_name] = self.connection[
                 connection_name].channel()
         else:
-            print("RabbitMQ 已经存在频道：{}".format(channel_name))
+            r_logger.warn("RabbitMQ 已经存在频道：{}".format(channel_name))
     
     """
     @description: 关闭连接
@@ -107,8 +108,9 @@ class r_rabbitmq():
                     try:
                         self.channel[channel_name].close()
                     except Exception as e:
-                        print("RabbitMQ 频道 {} 关闭出错！".format(channel_name))
-                        print(str(e))
+                        r_logger.error(
+                            "RabbitMQ 频道 {} 关闭出错！".format(channel_name))
+                        r_logger.error(e)
                 self.channel[channel_name] = None
             self.channel = {}
         # 关闭所有连接
@@ -119,8 +121,9 @@ class r_rabbitmq():
                     try:
                         self.connection[connection_name].close()
                     except Exception as e:
-                        print("RabbitMQ 连接 {} 关闭出错!".format(connection_name))
-                        print(str(e))
+                        r_logger.error(
+                            "RabbitMQ 连接 {} 关闭出错!".format(connection_name))
+                        r_logger.error(e)
                 self.connection[connection_name] = None
             self.connection = {}
     
