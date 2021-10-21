@@ -158,18 +158,22 @@ class r_bot:
     def send_message(self,
                      message,
                      chat_id=rab_config.load_package_config(
-                         "rab_config.ini", "rab_bot", "telegram_chat_id")):
+                         "rab_config.ini", "rab_bot", "telegram_chat_id"),
+                     parse_mode=None):
         # 判断是否能连接 Telegram 服务器
         if (self.is_connected):
             # 发送聊天信息的 API 地址
             send_message_url = self.url + "/sendMessage"
+            params = {
+                "parse_mode": parse_mode
+            }
             data = {
                 "chat_id": chat_id,
                 "text": message
             }
             try:
-                response = requests.post(send_message_url, data=data, \
-                    proxies=self.proxies, verify=False)
+                response = requests.post(send_message_url, params=params, \
+                    data=data, proxies=self.proxies, verify=False)
                 return json.loads(response.text)
             except Exception as e:
                 return {"ok": False, "description": "出错：{}".format(str(e))}
@@ -186,5 +190,20 @@ class r_bot:
 """
 if __name__ == "__main__":
     r_bot = r_bot()
+    # 测试基础功能
     print(r_bot.get_latest_messages())
-    print(r_bot.send_message("test"))
+    print(r_bot.send_message("*"*45))
+    # 测试表格
+    message = """
+```
+| BBB |
+| AAA |
+| Symbol | Price | Change |
+|--------|-------|--------|
+| ABC    | 20.85 |  1.626 |
+| DEF    | 78.95 |  0.099 |
+| GHI    | 23.45 |  0.192 |
+| JKL    | 98.85 |  0.292 |
+```
+"""
+    print(r_bot.send_message(message, parse_mode="Markdown"))
