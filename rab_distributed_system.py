@@ -14,7 +14,6 @@ from datetime import datetime, timezone, timedelta
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 from rab_python_packages import rab_logging
-from rab_python_packages import rab_postgresql
 
 
 # 日志记录
@@ -228,6 +227,7 @@ class r_status():
 if __name__ == "__main__":
 
     import time
+    from rab_python_packages import rab_postgresql
 
     r_pgsql_driver = rab_postgresql.r_pgsql_driver()
     try:

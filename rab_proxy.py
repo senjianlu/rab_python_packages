@@ -19,6 +19,7 @@ from rab_python_packages import rab_config
 from rab_python_packages import rab_logging
 from rab_python_packages import rab_ip
 from rab_python_packages import rab_postgresql
+from rab_python_packages import rab_subscription_node
 
 
 # 日志记录
@@ -36,14 +37,15 @@ def get_personal_proxy_infos(location=None):
     personal_proxy_infos = {}
     for personal_proxy in rab_config.load_package_config(
             "rab_config.ini", "common", "proxy"):
-        proxy_method = personal_proxy.split("://")[0]
-        if (proxy_method not in personal_proxy_infos.keys()):
+        proxy_info = rab_subscription_node.parse_http_or_socks5_node_url(
+            personal_proxy)
+        if (proxy_info["type"] not in personal_proxy_infos.keys()):
             personal_proxy_infos[proxy_method] = {}
-        out_ip = personal_proxy.split("://")[1].split("@")[1].split(":")[0]
         personal_proxy_info = {
-            "host": out_ip,
-            "port": personal_proxy.split("://")[1].split("@")[1].split(":")[1],
-            "auth": personal_proxy.split("://")[1].split("@")[0],
+            "host": proxy_info["server"],
+            "port": proxy_info["port"],
+            "auth": "{}:{}".format(
+                proxy_info["username"], proxy_info["password"]),
             "access": {},
             "level": 10
         }

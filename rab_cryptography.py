@@ -10,10 +10,48 @@
 
 
 import sys
+import base64
 import datetime
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
+from rab_python_packages import rab_logging
 
+
+# 日志记录
+r_logger = rab_logging.r_logger()
+
+
+"""
+@description: 用以订阅信息 Base64 解码的方法
+-------
+@param:
+-------
+@return:
+"""
+def b64decode(str_4_b64decode):
+    str_4_b64decode = str_4_b64decode.replace("_", "/")
+    str_4_b64decode = str_4_b64decode.replace("-", "+")
+    # 带 - 需要用专用的 URL Base64 解码
+    if ("-" in str_4_b64decode):
+        # 最多加 4 次 "=" 以使原始信息符合 Base64 格式
+        for i in range(0, 4):
+            try:
+                str_after_b64decode = base64.urlsafe_b64decode(str_4_b64decode)
+                return str_after_b64decode
+            except Exception:
+                str_4_b64decode = str_4_b64decode + "="
+    # 不包含 - 则试用普通的 Base64 解码即可
+    else:
+        # 最多加 4 次 "=" 以使原始信息符合 Base64 格式
+        for i in range(0, 4):
+            try:
+                str_after_b64decode = base64.b64decode(str_4_b64decode)
+                return str_after_b64decode
+            except Exception:
+                str_4_b64decode = str_4_b64decode + "="
+    # 解码失败
+    r_logger.error("Base64 解码失败！待解码内容：{}".format(str_4_b64decode))
+    return None
 
 """
 @description: 获得当天的日期 YYMMDD 格式作为默认加密密钥

@@ -6,7 +6,7 @@
 # @DATE: 2021/09/04 周六
 # @TIME: 21:46:33
 #
-# @DESCRIPTION: 长连接模块
+# @DESCRIPTION: 客户端（长连接）模块
 
 
 import sys
