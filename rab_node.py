@@ -2,7 +2,7 @@
 # -*- coding:UTF-8 -*-
 #
 # @AUTHOR: Rabbir
-# @FILE: /root/GitHub/sub-2-proxy/rab_python_packages/rab_subscription_node.py
+# @FILE: /root/GitHub/sub-2-proxy/rab_python_packages/rab_node.py
 # @DATE: 2021/11/05 Fri
 # @TIME: 14:37:57
 #
@@ -395,7 +395,7 @@ def parse_node_url(node_url, parse_method):
     if (parse_method == "subconverter"):
         # subconverter 后端地址
         subconverter_url = rab_config.load_package_config(
-            "rab_config.ini", "rab_subscription_node", "subconverter_url")
+            "rab_config.ini", "rab_node", "subconverter_url")
         return parse_node_url_by_subconverter(node_url, subconverter_url)
     # 自行解析
     else:
@@ -423,7 +423,7 @@ def parse_node_url(node_url, parse_method):
 -------
 @return:
 """
-class r_subscription_node():
+class r_node():
 
     """
     @description: 初始化
@@ -436,7 +436,7 @@ class r_subscription_node():
                  node_url,
                  subscription_url=None,
                  parse_method=rab_config.load_package_config(
-                     "rab_config.ini", "rab_subscription_node", "parse_method")):
+                     "rab_config.ini", "rab_node", "parse_method")):
         self.url = node_url
         self.subscription_url = subscription_url
         self.info = parse_node_url(self.url, parse_method)
@@ -466,7 +466,7 @@ class r_subscription_node():
         if (self.info):
             # 获取配置命令模板
             node_configure_command_template = rab_config.load_package_config(
-                "rab_linux_command.ini", "rab_subscription_node", \
+                "rab_linux_command.ini", "rab_node", \
                 "{}_configure".format(client_side))
             # 替换 SOCKS5 端口
             node_configure_command = node_configure_command_template.replace(
@@ -495,11 +495,11 @@ if __name__ == "__main__":
         for row in f.readlines():
             node_urls.append(row)
     for node_url in node_urls:
-        node = r_subscription_node(node_url)
+        node = r_node(node_url)
         print(node.id, node.info)
         print(node.generate_node_configure_command(1080))
 
     # 对单个节点链接进行解析
     # node_url = ""
-    # node = r_subscription_node(node_url)
+    # node = r_node(node_url)
     # print(node.id, node.info)

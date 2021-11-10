@@ -20,7 +20,7 @@ from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 from rab_python_packages import rab_logging
-from rab_python_packages import rab_subscription_node
+from rab_python_packages import rab_node
 
 
 # 日志记录
@@ -85,7 +85,7 @@ def gost_start(local_proxy_port, proxy):
         "rab_linux_command.ini", "rab_chrome", "gost_start")
     # 添加启动参数
     gost_start_command += " -p {}".format(str(local_proxy_port))
-    proxy_info = rab_subscription_node.parse_http_or_socks5_node_url(proxy)
+    proxy_info = rab_node.parse_http_or_socks5_node_url(proxy)
     gost_start_command += " -A {}".format(str(proxy_info["type"]))
     gost_start_command += " -U {}".format(str(proxy_info["username"]))
     gost_start_command += " -D {}".format(str(proxy_info["password"]))
