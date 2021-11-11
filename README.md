@@ -27,6 +27,7 @@
 | minio | 7.1.0 |  
 | pika | 1.2.0 |  
 | psycopg2 | 2.8.6 |  
+| PyYAML | 6.0 |  
 | redis | 3.5.3 |  
 | requests[socks] | 2.10.0 |  
 | rsa | 4.7.2 |  
@@ -87,7 +88,7 @@ FROM rabbir/rab_python_packages:latest
 ```
 
 ## 整体结构
-![rab_python_packages](https://raw.githubusercontent.com/senjianlu/imgs/master/20210920190810.png)
+![rab_python_packages](https://raw.githubusercontent.com/senjianlu/imgs/master/20211111083715.png)  
 
 ## 特别鸣谢
 - 感谢 [JetBrains](https://www.jetbrains.com/) 为本项目提供的 [PyCharm](https://www.jetbrains.com/pycharm/) 开源许可证
