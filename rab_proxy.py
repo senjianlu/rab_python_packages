@@ -94,6 +94,7 @@ def get_proxy_infos(r_pgsql_driver, location=None, level=None):
                     sp_socks5_auth_info AS socks5_auth_info,
                     sp_access_info AS access_info,
                     sp_status AS status,
+                    is_deleted AS is_deleted,
                     5 AS level
                 FROM
                     sa_proxy
@@ -112,6 +113,7 @@ def get_proxy_infos(r_pgsql_driver, location=None, level=None):
                     sps_socks5_auth_info AS socks5_auth_info,
                     sps_access_info AS access_info,
                     sps_status AS status,
+                    is_deleted AS is_deleted,
                     8 AS level
                 FROM
                     sa_proxy_server
@@ -121,20 +123,21 @@ def get_proxy_infos(r_pgsql_driver, location=None, level=None):
             WHERE
                 1 = 1
             AND status = 1
+            AND NOT is_deleted
         """
         # 如果有地区限制，多加一行搜索条件
         if (location):
-            select_filter_2_append = """
+            select_filter = """
                 AND proxy.location IS NOT NULL
                 AND proxy.location LIKE '%{}%'
             """.format(location)
-            select_sql = select_sql + select_filter_2_append
+            select_sql += select_filter
         # 搜索
-        result = r_pgsql_driver.select(select_sql)
+        select_result = r_pgsql_driver.select(select_sql)
         # 乱序搜索结果
-        random.shuffle(result)
+        random.shuffle(select_result)
         # 将搜索出的数据转为代理字典
-        for row in result:
+        for row in select_result:
             for proxy_method in proxy_infos.keys():
                 # 如果端口有服务
                 if (row[proxy_method+"_proxy_port"]):
@@ -349,7 +352,9 @@ class r_proxy():
 if __name__ == "__main__":
     r_pgsql_driver = rab_postgresql.r_pgsql_driver(show_column_name=True)
     try:
-        print(get_proxy_infos(r_pgsql_driver))
+        r_proxy = r_proxy(r_pgsql_driver, location="香港")
+        for _ in range(0, 100):
+            print(r_proxy.get("google"))
     except Exception as e:
         r_logger.error("rab_proxy.py 单体测试出错！")
         r_logger.error(e)
