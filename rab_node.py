@@ -59,6 +59,7 @@ def parse_http_or_socks5_node_url(node_url):
     else:
         # SOCKS5 协议
         node_info["type"] = "socks5"
+    node_info_str = node_url.split("://")[1]
     # 服务器 IP 或解析域名
     if ("@" in node_url):
         node_info["server"] = node_info_str.split("@")[1].split(":")[0]
