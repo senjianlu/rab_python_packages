@@ -180,8 +180,8 @@ class r_chrome():
                 # 浏览器代理的配置
                 chrome_options.add_argument(
                     "--proxy-server={}".format(proxy))
-                r_logger.info(
-                    "Linux 系统下 Chrome 使用代理：{}".format(proxy))
+                r_logger.info("Linux 系统下 Chrome 使用代理：{}，原代理：{}" \
+                    .format(proxy, self.proxy))
             # 提前建立了软连接的 chromedriver
             chrome_driver = "chromedriver"
         # Windows 和 Linux 分开配置完成后，建立浏览器
