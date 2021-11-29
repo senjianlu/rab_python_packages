@@ -40,7 +40,7 @@ def get_personal_proxy_infos(location=None):
         proxy_info = rab_node.parse_http_or_socks5_node_url(
             personal_proxy)
         if (proxy_info["type"] not in personal_proxy_infos.keys()):
-            personal_proxy_infos[proxy_method] = {}
+            personal_proxy_infos[proxy_info["type"]] = {}
         personal_proxy_info = {
             "host": proxy_info["server"],
             "port": proxy_info["port"],
@@ -49,14 +49,11 @@ def get_personal_proxy_infos(location=None):
             "access": {},
             "level": 10
         }
-        if (location):
-            # 将代理转换并测试代理所在地区
-            ip_info = rab_ip.get_ip_info(
-                parse_proxy_info(proxy_method, personal_proxy_info))
-            if (ip_info["location"] == location):
-                personal_proxy_infos[proxy_method][out_ip] = personal_proxy_info
-        else:
-            personal_proxy_infos[proxy_method][out_ip] = personal_proxy_info
+        ip_info = rab_ip.get_ip_info(
+            parse_proxy_info(proxy_info["type"], personal_proxy_info))
+        if (not location or ip_info["location"] == location):
+            personal_proxy_infos[proxy_info["type"]][ip_info["ip"]] \
+                = personal_proxy_info
     return personal_proxy_infos
 
 """
@@ -352,8 +349,11 @@ class r_proxy():
 if __name__ == "__main__":
     r_pgsql_driver = rab_postgresql.r_pgsql_driver(show_column_name=True)
     try:
+        # 配置文件中的代理
+        print(get_personal_proxy_infos())
+        # 数据库中的代理
         r_proxy = r_proxy(r_pgsql_driver, location="香港")
-        for _ in range(0, 100):
+        for _ in range(0, 10):
             print(r_proxy.get("google"))
     except Exception as e:
         r_logger.error("rab_proxy.py 单体测试出错！")
