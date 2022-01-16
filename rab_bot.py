@@ -15,6 +15,7 @@ import requests
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
 from rab_python_packages import rab_logging
+from rab_python_packages import rab_requests
 
 
 # 日志记录
@@ -82,8 +83,8 @@ class r_bot:
                     "rab_config.ini", "common", "proxy"):
                 try:
                     proxies = {
-                        "http": proxy,
-                        "https": proxy
+                        "http": proxy.replace("socks5://", "socks5h://"),
+                        "https": proxy.replace("socks5://", "socks5h://")
                     }
                     result = requests.get("https://core.telegram.org/bots",
                         proxies=proxies, timeout=5)
