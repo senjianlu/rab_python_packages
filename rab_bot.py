@@ -156,7 +156,7 @@ class r_bot:
     @return:
     """
     def send_message(self,
-                     message,
+                     message_data,
                      chat_id=rab_config.load_package_config(
                          "rab_config.ini", "rab_bot", "telegram_chat_id"),
                      parse_mode=None):
@@ -164,16 +164,17 @@ class r_bot:
         if (self.is_connected):
             # 发送聊天信息的 API 地址
             send_message_url = self.url + "/sendMessage"
-            params = {
-                "parse_mode": parse_mode
+            headers = {
+                "Content-Type": "application/json"
             }
             data = {
+                "parse_mode": parse_mode,
                 "chat_id": chat_id,
-                "text": message
             }
+            data.update(message_data)
             try:
-                response = requests.post(send_message_url, params=params, \
-                    data=data, proxies=self.proxies, verify=False)
+                response = requests.post(send_message_url, headers=headers, \
+                    data=json.dumps(data), proxies=self.proxies, verify=False)
                 return json.loads(response.text)
             except Exception as e:
                 return {"ok": False, "description": "出错：{}".format(str(e))}
