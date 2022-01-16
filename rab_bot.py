@@ -70,7 +70,7 @@ class r_bot:
                 self.is_connected = False
                 r_logger.error("Telegram Bot 使用代理 {} 访问测试失败！".format(
                     str(self.proxies)))
-        except Exception:
+        except Exception as e:
             self.is_connected = False
             r_logger.error("Telegram Bot 使用代理 {} 访问测试出错！".format(
                 str(self.proxies)))
