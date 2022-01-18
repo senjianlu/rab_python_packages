@@ -6,8 +6,10 @@ LABEL maintainer="Rabbir admin@cs.cheap"
 
 # Docker 内用户切换到 root
 USER root
+
 # 设置时区为东八区
-RUN echo "Asia/shanghai" > /etc/timezone
+ENV TZ Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime > /etc/timezone
 
 # 安装 Git 和 Python3
 WORKDIR /root

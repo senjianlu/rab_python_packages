@@ -194,9 +194,8 @@ if __name__ == "__main__":
     r_bot = r_bot()
     # 测试基础功能
     print(r_bot.get_latest_messages())
-    print(r_bot.send_message("*"*45))
     # 测试表格
-    message = """
+    table = """
 ```
 | BBB |
 | AAA |
@@ -208,4 +207,5 @@ if __name__ == "__main__":
 | JKL    | 98.85 |  0.292 |
 ```
 """
-    print(r_bot.send_message(message, parse_mode="Markdown"))
+    message_data = {"text": table}
+    print(r_bot.send_message(message_data, parse_mode="Markdown"))
