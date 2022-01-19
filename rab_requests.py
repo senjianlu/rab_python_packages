@@ -11,6 +11,7 @@
 
 import sys
 import json
+import urllib
 import requests
 sys.path.append("..") if (".." not in sys.path) else True
 from rab_python_packages import rab_config
@@ -21,6 +22,18 @@ from rab_python_packages import rab_proxy
 # 日志记录
 r_logger = rab_logging.r_logger()
 
+
+"""
+@description: 根据请求地址和参数拼凑出实际链接
+-------
+@param:
+-------
+@return:
+"""
+def get_true_url(url, params):
+    url_parts = list(urllib.parse.urlparse(url))
+    url_parts[4] = urllib.parse.urlencode(params)
+    return urllib.parse.urlunparse(url_parts)
 
 """
 @description: 不使用代理无法访问的情况下，尝试所有自建代理进行保险访问
@@ -183,10 +196,11 @@ class r_requests():
 @return:
 """
 if __name__ == "__main__":
-    personal_proxy_infos = rab_proxy.get_personal_proxy_infos()
-    print(personal_proxy_infos)
-    for proxy_out_ip in personal_proxy_infos["socks5"]:
-        print(proxy_out_ip)
-        print(rab_proxy.parse_proxy_info(
-            "socks5", personal_proxy_infos["socks5"][proxy_out_ip]))
-    pass
+    # personal_proxy_infos = rab_proxy.get_personal_proxy_infos()
+    # print(personal_proxy_infos)
+    # for proxy_out_ip in personal_proxy_infos["socks5"]:
+    #     print(proxy_out_ip)
+    #     print(rab_proxy.parse_proxy_info(
+    #         "socks5", personal_proxy_infos["socks5"][proxy_out_ip]))
+    # pass
+    print(get_true_url("http://baidu.com", {"wd": "中文"}))
