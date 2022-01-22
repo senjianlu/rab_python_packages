@@ -26,12 +26,14 @@ def find_rab_file(rab_file_name):
     paths = [
         # 在项目主目录
         "../",
+        "../../",
         # 判断该路径下配置文件是否存在
         None,
         # 不在的话就在共通包中查找
         "rab_python_packages/",
         # 或者在上级路径的共通包中查找
-        "../rab_python_packages/"
+        "../rab_python_packages/",
+        "../../rab_python_packages/"
     ]
     for path in paths:
         if (path):
