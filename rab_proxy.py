@@ -233,41 +233,20 @@ class r_proxy():
     def get(self, web, accessable_webs=[], proxy_method="socks5"):
         # 测试所有需要验证的网站是否都有访问可行性数据
         all_webs = [web]
-        for accessable_web in accessable_webs:
-            all_webs.append(accessable_web)
+        all_webs.extend(accessable_webs)
         for web in all_webs:
-            web = web.lower()
-            if (web in self.ip_usage_counts.keys()):
-                pass
-            # 如果没有访问可行性数据，则报错
-            else:
+            if (web not in self.ip_usage_counts.keys()):
                 r_logger.warn(
                     "暂时没有针对网站：{} 的代理访问可行性测试！".format(web))
                 return None
-        # 取出能访问主网站的 IP
-        filtered_ip_usage_counts = {}
-        for out_ip in self.ip_usage_counts[web]:
-            # 如果这个 IP 能支持指定的代理方式
-            if (out_ip in self.proxy_infos[proxy_method].keys()):
-                filtered_ip_usage_counts[out_ip] \
-                    = self.ip_usage_counts[web][out_ip]
-        # 如果有其他需要验证可用性的网站则进行二次筛选
-        filtered_2x_ip_usage_counts = {}
-        if (accessable_webs):
-            for out_ip in filtered_ip_usage_counts:
-                access_flg = True
-                for accessable_web in accessable_webs:
-                    if (out_ip in self.ip_usage_counts[accessable_web]):
-                        pass
-                    else:
-                        # 跳过这个 IP
-                        access_flg = False
-                # 这个 IP 对所有需要访问的网站都可行时加入二次筛选结果
-                if (access_flg):
-                    filtered_2x_ip_usage_counts[out_ip] \
-                        = filtered_ip_usage_counts[out_ip]
-            filtered_ip_usage_counts = filtered_2x_ip_usage_counts
-        # 获取使用次数最少的那个代理
+        # 筛选出的 IP
+        filtered_ips = list(self.ip_usage_counts[web].keys())
+        for accessable_web in accessable_webs:
+            filtered_ips = [ip for ip in filtered_ips if ip in list(
+                self.ip_usage_counts[accessable_web].keys())]
+        filtered_ip_usage_counts = {
+            ip:self.ip_usage_counts[web][ip] for ip in filtered_ips}
+        # 取出使用次数最少的代理
         least_used_ip = min(
             filtered_ip_usage_counts, key=filtered_ip_usage_counts.get)
         # 将使用次数加 1
