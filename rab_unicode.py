@@ -9,6 +9,9 @@
 # @DESCRIPTION: 共通包 字符判断
 
 
+import re
+
+
 """
 @description: 判断是否为中文
 -------
@@ -50,6 +53,21 @@ def is_number(char):
         return False
 
 """
+@description: 判断字符串中是否只有数字和字母
+-------
+@param:
+-------
+@return:
+"""
+def is_all_alphabet_and_number(_string):
+    len_after_filter = re.sub(
+        u"([^\u0041-\u005a\u0061-\u007a\u0030-\u0039])", "", _string)
+    if (len(len_after_filter) == len(_string)):
+        return True
+    else:
+        return False
+
+"""
 @description: 获取字符串中全角和半角字符的数量
 -------
 @param:
@@ -82,3 +100,4 @@ def get_true_length(_string):
 if __name__ == "__main__":
     _string = "全角字符，。abc0123456,./™★"
     print(get_true_length(_string))
+    print(is_all_alphabet_and_number(_string))
