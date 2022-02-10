@@ -67,6 +67,7 @@ class r_bot:
                 self.is_connected = True
                 r_logger.info("Telegram Bot 使用代理 {} 访问测试成功！".format(
                     str(self.proxies)))
+                return True
             else:
                 self.is_connected = False
                 r_logger.error("Telegram Bot 使用代理 {} 访问测试失败！".format(
@@ -93,7 +94,7 @@ class r_bot:
                         self.is_connected = True
                         r_logger.info("Telegram Bot 开始使用代理：{}".format(
                             str(proxies)))
-                        break
+                        return True
                     else:
                         r_logger.error("Telegram Bot 无法使用代理：{}".format(
                             str(proxies)))
@@ -102,6 +103,7 @@ class r_bot:
                         str(proxies)))
                     r_logger.error(e)
             r_logger.error("Telegram Bot 尝试所有配置文件中的代理均无法访问！")
+        return False
 
 
     """
