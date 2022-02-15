@@ -23,6 +23,20 @@ r_logger = rab_logging.r_logger()
 
 
 """
+@description: 判断 Telegram 消息是否过长
+-------
+@param:
+-------
+@return:
+"""
+def is_message_text_too_long(message_text):
+    if (len(message_text) > 4095):
+        return True
+    else:
+        return False
+
+
+"""
 @description: r_bot 类
 -------
 @param:
