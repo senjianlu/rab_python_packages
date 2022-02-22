@@ -189,7 +189,8 @@ class r_crontab():
     def add(self, task_name, crontab_time_setting):
         self.task[task_name] = {
             "crontab_time_setting": crontab_time_setting,
-            "run_timestamps": get_run_timestamps(crontab_time_setting)}
+            "run_timestamps": get_run_timestamps(crontab_time_setting),
+            "no_stop": False}
     
     """
     @description: 续约任务
@@ -251,6 +252,9 @@ class r_crontab():
     @return:
     """
     def is_time_2_run(self, task_name):
+        # 如果是不间断运行则直接返回 True
+        if (self.task[task_name]["no_stop"]):
+            return True
         # 如果曾经开始并结束过
         if ("last_run_over_timestamp" in self.task[task_name].keys()
                 and self.task[task_name]["last_run_over_timestamp"]):
@@ -280,6 +284,9 @@ class r_crontab():
     @return:
     """
     def wait(self, task_name):
+        # 如果是不间断运行则直接返回 True
+        if (self.task[task_name]["no_stop"]):
+            return True
         next_run_timestamp = self.get_next_run_timestamp(task_name)
         r_logger.info("下一次 {task_name} 任务执行的时间：{time}".format(
             task_name=task_name, time=time.strftime(
@@ -309,19 +316,22 @@ class r_crontab():
         else:
             if (method=="minute"):
                 if ((int(time.time())-get_last_whole_timestamp(self.task[
-                        task_name]["last_run_over_timestamp"], "minute")) >= 60):
+                        task_name]["last_run_start_timestamp"], "minute")) \
+                            >= 60):
                     return True
                 else:
                     return False
             elif (method=="hour"):
                 if ((int(time.time())-get_last_whole_timestamp(self.task[
-                        task_name]["last_run_over_timestamp"], "hour")) >= 3600):
+                        task_name]["last_run_start_timestamp"], "hour")) \
+                            >= 3600):
                     return True
                 else:
                     return False
             elif (method=="day"):
                 if ((int(time.time())-get_last_whole_timestamp(self.task[
-                        task_name]["last_run_over_timestamp"], "day")) >= 86400):
+                        task_name]["last_run_start_timestamp"], "day")) \
+                            >= 86400):
                     return True
                 else:
                     return False
