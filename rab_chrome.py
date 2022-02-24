@@ -13,6 +13,7 @@ import re
 import os
 import sys
 import time
+import requests
 import platform
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -205,15 +206,9 @@ class r_chrome():
     @return:
     """
     def import_jquery(self):
-        # 选择百度的源
-        import_jquery_js = """
-        var importJs = document.createElement("script");
-        importJs.setAttribute("type","text/javascript");
-        importJs.setAttribute("script",
-            "https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js");
-        document.getElementsByTagName("head")[0].appendChild(importJs);
-        """
-        self.driver.execute_script(import_jquery_js)
+        jquery_js_text = requests.get("https://libs.baidu.com/jquery/2.0.0/" \
+            + "jquery.min.js").text
+        self.driver.execute_script(jquery_js_text)
         # 循环 10 秒等待导入成功
         for _ in range(0, 10):
             test_jquery_js = "$('head').append('<p>jquery_test</p>');"
