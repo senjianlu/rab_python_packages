@@ -53,7 +53,7 @@ def construct_chrome(port):
         build_command = 'start "" chrome.exe ' \
             + '--remote-debugging-port= ' + str(port) \
             + '--user-data-dir="C:\selenum\AutomationProfile"'
-        os.system(cmd_command)
+        os.system(build_command)
         time.sleep(3)
         r_logger.info("Windows 系统下端口 {} 上 Chrome 启动成功！".format(
             str(port)))
@@ -69,9 +69,10 @@ def construct_chrome(port):
 -------
 @return:
 """
-def gost_stop():
+def gost_stop(local_proxy_port):
     gost_stop_command = rab_config.load_package_config(
         "rab_linux_command.ini", "rab_chrome", "gost_stop")
+    gost_stop_command += " {}".format(str(local_proxy_port))
     os.system(gost_stop_command)
 
 """
@@ -169,7 +170,7 @@ class r_chrome():
                 # 如果需要验证的话
                 if ("@" in self.proxy):
                     # 通过 GOST 转发
-                    gost_stop()
+                    gost_stop(self.local_proxy_port)
                     gost_start(self.local_proxy_port, self.proxy)
                     # 本地代理信息
                     proxy = "socks5://127.0.0.1:{}".format(
@@ -232,7 +233,7 @@ class r_chrome():
     def close(self):
         # 关闭 GOST
         if (self.is_gost_used):
-            gost_stop()
+            gost_stop(self.local_proxy_port)
         # Windows 系统
         if (self.system == "windows"):
             r_logger.info("Windows 系统下开始关闭 Chrome......")
@@ -315,10 +316,12 @@ class r_chrome():
 @return:
 """
 if __name__ == "__main__":
-    r_chrome = r_chrome()
-    r_chrome.build()
-    r_chrome.restart()
+    # r_chrome = r_chrome()
+    # r_chrome.build()
+    # r_chrome.restart()
     # r_chrome.driver.get("https://baidu.com")
     # time.sleep(3)
     # print(r_chrome.driver.page_source)
     # r_chrome.close()
+    proxy = "socks5://127.0.0.1:1080"
+    gost_start(33333, proxy)
