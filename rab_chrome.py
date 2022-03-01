@@ -137,7 +137,7 @@ class r_chrome():
     -------
     @return:
     """
-    def build(self):
+    def build(self, dev_shm_usage=True):
         # 浏览器配置
         capabilities = DesiredCapabilities.CHROME
         capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
@@ -165,6 +165,8 @@ class r_chrome():
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("window-size=1024,768")
             chrome_options.add_argument("--no-sandbox")
+            if (not dev_shm_usage):
+                chrome_options.add_argument("--disable-dev-shm-usage")
             # 无需认证的代理则直接加上属性即可
             if(self.proxy):
                 # 如果需要验证的话
