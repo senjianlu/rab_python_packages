@@ -137,7 +137,7 @@ class r_chrome():
     -------
     @return:
     """
-    def build(self, dev_shm_usage=True):
+    def build(self, dev_shm_usage=True, chrome_driver_path="chromedriver"):
         # 浏览器配置
         capabilities = DesiredCapabilities.CHROME
         capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
@@ -155,8 +155,8 @@ class r_chrome():
             # 如果没有指定端口
             else:
                 pass
-            # 提前将 chromedriver 路径加入环境变量中
-            chrome_driver = "chromedriver.exe"
+            # 默认已经提前将 chromedriver 路径加入环境变量中
+            chrome_driver = chrome_driver_path
         # Linux 系统
         elif(self.system == "linux"):
             r_logger.info("Linux 系统下 Chrome 构建开始......")
@@ -186,8 +186,8 @@ class r_chrome():
                     "--proxy-server={}".format(proxy))
                 r_logger.info("Linux 系统下 Chrome 使用代理：{}，原代理：{}" \
                     .format(proxy, self.proxy))
-            # 提前建立了软连接的 chromedriver
-            chrome_driver = "chromedriver"
+            # 默认已经提前为 chromedriver 建立了软连接
+            chrome_driver = chrome_driver_path
         # Windows 和 Linux 分开配置完成后，建立浏览器
         try:
             self.driver = webdriver.Chrome(chrome_driver, \
