@@ -48,11 +48,12 @@ def get_system_type():
 -------
 @return:
 """
-def construct_chrome(port):
+def construct_chrome(port, chrome_path, chrome_user_data_path):
     try:
-        build_command = 'start "" chrome.exe ' \
-            + '--remote-debugging-port= ' + str(port) \
-            + '--user-data-dir="C:\selenum\AutomationProfile"'
+        build_command = 'start "" "{}" '.format(chrome_path) \
+            + '--remote-debugging-port={} '.format(str(port)) \
+            + '--user-data-dir="{}"'.format(chrome_user_data_path)
+        print(build_command)
         os.system(build_command)
         time.sleep(3)
         r_logger.info("Windows 系统下端口 {} 上 Chrome 启动成功！".format(
@@ -137,7 +138,11 @@ class r_chrome():
     -------
     @return:
     """
-    def build(self, dev_shm_usage=True, chrome_driver_path="chromedriver"):
+    def build(self,
+              dev_shm_usage=True,
+              chrome_path="chrome.exe",
+              chrome_driver_path="chromedriver",
+              chrome_user_data_path="C:\selenum\AutomationProfile"):
         # 浏览器配置
         capabilities = DesiredCapabilities.CHROME
         capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
@@ -148,7 +153,7 @@ class r_chrome():
             # 如果指定了端口
             if (self.port):
                 # 在指定端口构建浏览器
-                construct_chrome(self.port)
+                construct_chrome(self.port, chrome_path, chrome_user_data_path)
                 # 接管端口上的浏览器
                 chrome_options.add_experimental_option(
                     "debuggerAddress", "127.0.0.1:"+str(self.port))
