@@ -60,12 +60,22 @@ class r_redis():
     def connect(self):
         try:
             self.connection = redis.Redis(host=self.host, port=self.port, \
-                decode_responses=self.decode_responses)
+                password=self.password, decode_responses=self.decode_responses)
             return True
         except Exception as e:
             r_logger.error("Redis 建立连接时出错！")
             r_logger.error(e)
             return False
+    
+    """
+    @description: 断开连接
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def disconnect(self):
+        pass
 
 
 """
