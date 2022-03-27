@@ -63,6 +63,17 @@ class r_hourglass():
         self.countdown_thread = Thread(target=self.countdown)
         self.countdown_thread.setDaemon(True)
         self.countdown_thread.start()
+    
+    """
+    @description: 沙漏停止
+    -------
+    @param:
+    -------
+    @return:
+    """
+    def stop(self):
+        print("沙漏停止计时！")
+        self.last_seconds = 999999
 
     """
     @description: 重置沙漏
