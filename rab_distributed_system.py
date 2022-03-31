@@ -21,6 +21,19 @@ r_logger = rab_logging.r_logger()
 
 
 """
+@description: 设置当前机器的节点 ID
+-------
+@param:
+-------
+@return:
+"""
+def set_node_id(node_id):
+    package_config = rab_config.get_config("rab_config.ini")
+    package_config.set("rab_distributed_system", "node_id", node_id)
+    package_config.write(open(rab_config.find_rab_file("rab_config.ini"), "w"))
+    return node_id
+
+"""
 @description: 获取当前机器的节点 ID
 -------
 @param:
@@ -45,7 +58,7 @@ def get_node_delay_time():
         "rab_config.ini", "rab_distributed_system", "node_delay_time")
     # 获取节点序号，除开 main 之外均需等待
     node_no = get_node_id().split("_")[-1]
-    if ("main" ==  node_no.lower()):
+    if (node_no.lower() == "main"):
         return 0
     elif(node_no.isdigit()):
         return int(node_delay_time)*int(node_no)
@@ -225,18 +238,18 @@ class r_status():
 @return:
 """
 if __name__ == "__main__":
-
-    import time
-    from rab_python_packages import rab_postgresql
-
-    r_pgsql_driver = rab_postgresql.r_pgsql_driver()
-    try:
-        r_status = r_status("test_project", "test_subproject", "test_module")
-        r_status.start(r_pgsql_driver, function="test_function")
-        time.sleep(10)
-        r_status.over("test_result", r_pgsql_driver, function="test_function")
-    except Exception as e:
-        r_logger.error("单体测试出错！")
-        r_logger.error(e)
-    finally:
-        r_pgsql_driver.close()
+    # import time
+    # from rab_python_packages import rab_postgresql
+    # r_pgsql_driver = rab_postgresql.r_pgsql_driver()
+    # try:
+    #     r_status = r_status("test_project", "test_subproject", "test_module")
+    #     r_status.start(r_pgsql_driver, function="test_function")
+    #     time.sleep(10)
+    #     r_status.over("test_result", r_pgsql_driver, function="test_function")
+    # except Exception as e:
+    #     r_logger.error("单体测试出错！")
+    #     r_logger.error(e)
+    # finally:
+    #     r_pgsql_driver.close()
+    # 测试修改节点 ID
+    set_node_id("test_node_id")
