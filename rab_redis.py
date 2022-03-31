@@ -21,13 +21,13 @@ r_logger = rab_logging.r_logger()
 
 
 """
-@description: Redis 对象
+@description: r_redis_driver 类
 -------
 @param:
 -------
 @return:
 """
-class r_redis():
+class r_redis_driver():
 
     """
     @description: 初始化
@@ -60,7 +60,8 @@ class r_redis():
     def connect(self):
         try:
             self.connection = redis.Redis(host=self.host, port=self.port, \
-                password=self.password, decode_responses=self.decode_responses)
+                password=self.password, decode_responses=self.decode_responses, \
+                charset="UTF-8", encoding="UTF-8")
             return True
         except Exception as e:
             r_logger.error("Redis 建立连接时出错！")
@@ -86,5 +87,8 @@ class r_redis():
 @return:
 """
 if __name__ == "__main__":
-    r_redis = r_redis()
-    r_redis.connect()
+    r_redis_driver = r_redis_driver()
+    r_redis_driver.connect()
+    print(r_redis_driver.connection.hget(
+        "status.project.subproject.module.submodule.method.function", \
+        "node_id_01"))
