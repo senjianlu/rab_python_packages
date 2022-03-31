@@ -24,6 +24,7 @@ WORKDIR /root/GitHub/rab_python_packages
 COPY . .
 
 # 配置环境
+RUN pip3 install configparser
 RUN python3 rab_env.py
 RUN python3 rab_env.py rab_chrome
 
