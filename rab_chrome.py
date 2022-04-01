@@ -170,7 +170,10 @@ class r_chrome():
             chrome_options.add_argument("--headless")
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("window-size=1024,768")
+            chrome_options.add_argument("enable-automation")
+            chrome_options.add_argument("--disable-infobars")
             chrome_options.add_argument("--no-sandbox")
+            chrome_options.add_argument("--disable-browser-side-navigation")
             if (not dev_shm_usage):
                 chrome_options.add_argument("--disable-dev-shm-usage")
             if (prefs):
