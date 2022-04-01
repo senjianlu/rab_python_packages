@@ -48,7 +48,7 @@ def get_system_type():
 -------
 @return:
 """
-def construct_chrome(port, chrome_path, chrome_user_data_path):
+def construct_chrome(port, chrome_path,  chrome_user_data_path):
     try:
         build_command = 'start "" "{}" '.format(chrome_path) \
             + '--remote-debugging-port={} '.format(str(port)) \
@@ -142,7 +142,8 @@ class r_chrome():
               dev_shm_usage=True,
               chrome_path="chrome.exe",
               chrome_driver_path="chromedriver",
-              chrome_user_data_path="C:\selenum\AutomationProfile"):
+              chrome_user_data_path="C:\selenum\AutomationProfile",
+              prefs=None):
         # 浏览器配置
         capabilities = DesiredCapabilities.CHROME
         capabilities["goog:loggingPrefs"] = {"browser": "ALL"}
@@ -172,6 +173,8 @@ class r_chrome():
             chrome_options.add_argument("--no-sandbox")
             if (not dev_shm_usage):
                 chrome_options.add_argument("--disable-dev-shm-usage")
+            if (prefs):
+                chrome_options.add_experimental_option("prefs", prefs)
             # 无需认证的代理则直接加上属性即可
             if(self.proxy):
                 # 如果需要验证的话
