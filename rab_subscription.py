@@ -22,6 +22,51 @@ from rab_python_packages import rab_requests
 r_logger = rab_logging.r_logger()
 
 
+class Subscription():
+    """
+    订阅类
+    """
+
+    def __init__(self, kind, url):
+        """
+        初始化
+        """
+        self.kind = kind
+        self.url = url
+        # 是否已经请求
+        self.is_request = 0
+        # 原始的请求信息
+        self.response_content = None
+        # 是否已经解析
+        self.is_parse = 0
+        # 节点数量
+        self.nodes_count = None
+        # 节点原始信息列表
+        self.node_origin_infos = []
+        # 节点 ID 列表（PostgreSQL 支持列表格式数据的存取）
+        self.node_ids = []
+        # 节点认证信息
+        self.node_auth_info = None
+        # 流量使用模式
+        self.traffic_mode = None
+        # 流量限制（单位为 mb）
+        self.traffic_maximum = None
+        # 流量已使用（单位为 mb）
+        self.traffic_used = None
+        # 流量下次重置日期
+        self.traffic_next_reset_date = None
+        # 订阅过期日期
+        self.expiration_date = None
+        # 订阅提供商名字
+        self.provider_name = None
+        # 订单提供商地址
+        self.provider_url = None
+        # 订阅提供商登陆用户名
+        self.provider_auth_username = None
+        # 订阅提供商登陆用户名
+        self.provider_auth_password = None
+
+
 """
 @description: 获取订阅的 Base64 解码前的原始信息
 -------

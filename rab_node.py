@@ -26,6 +26,33 @@ from rab_python_packages import rab_cryptography
 r_logger = rab_logging.r_logger()
 
 
+class Node():
+    """
+    代理类
+    """
+
+    def __init__(self,
+                 kind,
+                 origin_info,
+                 subscription_id):
+        """
+        初始化
+        """
+        self.kind = kind
+        self.protocol = None
+        # 节点原始信息：VPN 协议为文件内容，机场订阅为 Base64 解码前的节点信息
+        self.origin_info = origin_info
+        # 节点信息
+        self.info = None
+        # 所属订阅组
+        self.subscription_id = subscription_id
+        # 订阅所在服务器 ID
+        self.server_id = None
+        # 订阅所在的容器 ID
+        self.container_id = None
+        # 是否已经转变为代理
+        self.is_become_proxy = 0
+
 """
 @description: 获取指定参数的值
 -------
